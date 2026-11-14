@@ -95,7 +95,7 @@ def toggle_user_status(user_id: int):
     """Toggle user active / inactive status (ON / OFF switch)."""
     if user_id == current_user.id:
         flash("You cannot deactivate your own administrative account.", 'warning')
-        return redirect(url_for('admin.manage_users'))
+        return redirect(request.referrer or url_for('admin.manage_users'))
 
     user = User.query.get_or_404(user_id)
     user.is_active = not bool(user.is_active)
@@ -104,7 +104,7 @@ def toggle_user_status(user_id: int):
     status_str = "ACTIVE (ON)" if user.is_active else "INACTIVE (OFF)"
     AuditLog.log("USER_STATUS_TOGGLED", "User", user.id, current_user.id, f"Toggled {user.username} status to {status_str}")
     flash(f"User '{user.username}' status changed to {status_str}.", 'success' if user.is_active else 'info')
-    return redirect(url_for('admin.manage_users'))
+    return redirect(request.referrer or url_for('admin.manage_users'))
 
 
 @admin_bp.route('/users/<int:user_id>/delete', methods=['POST'])

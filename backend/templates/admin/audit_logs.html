@@ -4,6 +4,107 @@
 
 {% block content %}
 <style>
+  /* Status Toggle Switch inside Audit Logs */
+  .status-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.2rem 0.65rem 0.2rem 0.3rem;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 0.775rem;
+    font-weight: 700;
+    border: 1.5px solid transparent;
+    transition: all 0.2s ease;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    box-sizing: border-box;
+    text-decoration: none;
+  }
+  .status-toggle-btn.is-on {
+    background: #ecfdf5;
+    border-color: #6ee7b7;
+    color: #065f46;
+  }
+  .status-toggle-btn.is-on:hover {
+    background: #d1fae5;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+    transform: translateY(-1px);
+  }
+  .status-toggle-btn.is-off {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #64748b;
+  }
+  .status-toggle-btn.is-off:hover {
+    background: #f1f5f9;
+    box-shadow: 0 2px 4px rgba(148, 163, 184, 0.2);
+    transform: translateY(-1px);
+  }
+  .switch-track {
+    width: 36px;
+    height: 20px;
+    border-radius: 999px;
+    position: relative;
+    display: inline-block;
+    flex-shrink: 0;
+    transition: background-color 0.25s ease;
+    box-sizing: border-box;
+  }
+  .is-on .switch-track {
+    background-color: #10b981;
+  }
+  .is-off .switch-track {
+    background-color: #94a3b8;
+  }
+  .switch-thumb {
+    width: 14px;
+    height: 14px;
+    background-color: #ffffff;
+    border-radius: 50%;
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  }
+  .is-on .switch-thumb {
+    transform: translateX(16px);
+  }
+  .is-off .switch-thumb {
+    transform: translateX(0);
+  }
+  .status-text-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+    line-height: 1;
+    display: inline-block;
+  }
+  .is-on .status-text-label {
+    color: #047857;
+  }
+  .is-off .status-text-label {
+    color: #475569;
+  }
+  .status-locked-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+  .status-locked-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #16a34a;
+  }
   .custom-modal-overlay {
     position: fixed;
     inset: 0;
@@ -61,7 +162,7 @@
         {% endif %}
       </div>
       <h2>Security &amp; Operational Audit Trail</h2>
-      <p class="subtitle">Complete audit record of user logins, role changes, tickets, and RAG knowledge operations</p>
+      <p class="subtitle">Complete audit record of user logins, role changes, tickets, and user account status</p>
     </div>
     
     <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
@@ -77,7 +178,7 @@
   </div>
 
   <!-- Metric Stats Row -->
-  <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+  <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
     <!-- Today's Successful Logins -->
     <a href="{{ url_for('admin.audit_logs', filter='today_logins') }}" style="text-decoration: none; color: inherit;">
       <div class="stat-card" style="background: #ffffff; border-left: 4px solid #10b981; padding: 1rem 1.25rem;">
@@ -88,15 +189,6 @@
         </div>
       </div>
     </a>
-
-    <!-- Unique Active Users -->
-    <div class="stat-card" style="background: #ffffff; border-left: 4px solid #06b6d4; padding: 1rem 1.25rem; cursor: pointer;" onclick="openUserModal('all-users-summary-modal')">
-      <span class="stat-label">Active Users Summary</span>
-      <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-top: 0.25rem;">
-        <span class="stat-number" style="color: #0e7490;">{{ unique_users_list|length }}</span>
-        <span style="font-size: 0.8rem; color: #0284c7; text-decoration: underline;">view unique users</span>
-      </div>
-    </div>
 
     <!-- Today's Failed Logins -->
     <a href="{{ url_for('admin.audit_logs', filter='today_logins') }}" style="text-decoration: none; color: inherit;">
@@ -109,7 +201,7 @@
       </div>
     </a>
 
-    <!-- Total Active Logs Stored -->
+    <!-- Total Retained Records -->
     <div class="stat-card" style="background: #ffffff; border-left: 4px solid #3b82f6; padding: 1rem 1.25rem;">
       <span class="stat-label">Retained Audit Records</span>
       <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-top: 0.25rem;">
@@ -146,17 +238,6 @@
       >
         📋 All System Activity
       </a>
-
-      <!-- View Option Modal Trigger for Unique Users (No Repeat Users) -->
-      <button 
-        type="button" 
-        class="btn-action" 
-        style="padding: 0.45rem 0.9rem; font-size: 0.825rem; font-weight: 700; border-radius: 6px; background: #f0fdf4; color: #15803d; border: 1.5px solid #86efac; cursor: pointer;"
-        onclick="openUserModal('all-users-summary-modal')"
-        title="Check unique user login counts, first/last login and time duration (no repeat users)"
-      >
-        👥 View Unique Users Stats ({{ unique_users_list|length }})
-      </button>
     </div>
 
     <!-- Date-Wise Filter Form -->
@@ -212,10 +293,8 @@
           <tr>
             <th style="white-space: nowrap;">Timestamp / Date</th>
             <th>User</th>
-            <th>Action</th>
-            <th>Entity Type</th>
-            <th>Entity ID</th>
-            <th>Details</th>
+            <th style="text-align: center; white-space: nowrap;">Status (Active / Inactive)</th>
+            <th>Entity</th>
             <th style="text-align: center; white-space: nowrap;">View Option</th>
             <th style="text-align: right; white-space: nowrap;">Delete</th>
           </tr>
@@ -233,48 +312,52 @@
               <td style="font-weight: 600; white-space: nowrap;">
                 {% if log.user %}
                   <span style="color: #1e3a8a;">{{ log.user.username }}</span>
+                  <div style="font-size: 0.725rem; font-weight: normal; color: #64748b;">{{ log.user.email }}</div>
                 {% else %}
                   <span style="color: #64748b; font-style: italic;">System / Automated</span>
                 {% endif %}
               </td>
 
-              <!-- 3. Action with Color Coding -->
-              <td style="white-space: nowrap;">
-                {% if 'LOGIN_SUCCESS' in log.action %}
-                  <span class="category-pill" style="background: #ecfdf5; color: #047857; font-weight: 700; border: 1px solid #a7f3d0;">
-                    ✓ {{ log.action }}
-                  </span>
-                {% elif 'LOGIN_FAILED' in log.action or 'LOCKED' in log.action %}
-                  <span class="category-pill" style="background: #fef2f2; color: #b91c1c; font-weight: 700; border: 1px solid #fecaca;">
-                    ⚠ {{ log.action }}
-                  </span>
-                {% elif 'ROLE' in log.action or 'STATUS' in log.action or 'USER' in log.action %}
-                  <span class="category-pill" style="background: #ede9fe; color: #6d28d9; font-weight: 700;">
-                    👤 {{ log.action }}
-                  </span>
-                {% elif 'DOC' in log.action %}
-                  <span class="category-pill" style="background: #f0fdf4; color: #0f766e; font-weight: 700;">
-                    📄 {{ log.action }}
-                  </span>
+              <!-- 3. Status (Active / Inactive Button) -->
+              <td style="text-align: center; white-space: nowrap;">
+                {% if log.user %}
+                  {% if log.user.id == current_user.id %}
+                    <span class="status-locked-pill" title="Your administrative account is permanently ON">
+                      <span class="status-locked-dot"></span> ON (Active)
+                    </span>
+                  {% else %}
+                    <form action="{{ url_for('admin.toggle_user_status', user_id=log.user.id) }}" method="POST" style="margin: 0; display: inline-block;">
+                      <button 
+                        type="submit" 
+                        class="status-toggle-btn {% if log.user.is_active %}is-on{% else %}is-off{% endif %}"
+                        title="Click to toggle status: {% if log.user.is_active %}Turn OFF (Deactivate {{ log.user.username }}){% else %}Turn ON (Activate {{ log.user.username }}){% endif %}"
+                        onclick="return confirm('Change status for {{ log.user.username }} to {% if log.user.is_active %}INACTIVE (Turn OFF){% else %}ACTIVE (Turn ON){% endif %}?');"
+                      >
+                        <span class="switch-track">
+                          <span class="switch-thumb"></span>
+                        </span>
+                        <span class="status-text-label">
+                          {% if log.user.is_active %}
+                            ON &bull; Active
+                          {% else %}
+                            OFF &bull; Inactive
+                          {% endif %}
+                        </span>
+                      </button>
+                    </form>
+                  {% endif %}
                 {% else %}
-                  <span class="category-pill">{{ log.action }}</span>
+                  <span style="color: #94a3b8; font-size: 0.775rem;">System</span>
                 {% endif %}
               </td>
 
-              <!-- 4. Entity Type -->
-              <td style="white-space: nowrap; font-size: 0.85rem;">{{ log.entity_type }}</td>
-
-              <!-- 5. Entity ID -->
+              <!-- 4. Entity (Type & ID) -->
               <td style="white-space: nowrap; font-size: 0.85rem;">
-                {% if log.entity_id %}<code>#{{ log.entity_id }}</code>{% else %}-{% endif %}
+                <span class="category-pill" style="font-size: 0.75rem;">{{ log.entity_type }}</span>
+                {% if log.entity_id %}<code>#{{ log.entity_id }}</code>{% endif %}
               </td>
 
-              <!-- 6. Details -->
-              <td style="font-size: 0.85rem; line-height: 1.45; color: #334155;">
-                {{ log.details or '-' }}
-              </td>
-
-              <!-- 7. View Option (Check how many times logged and time duration) -->
+              <!-- 5. View Option (Check how many times logged and time duration) -->
               <td style="text-align: center; white-space: nowrap;">
                 {% if log.user_id and log.user_id in user_stats %}
                   <button 
@@ -282,7 +365,7 @@
                     class="btn-action" 
                     style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; font-weight: 700; font-size: 0.775rem; padding: 0.25rem 0.65rem; border-radius: 4px; cursor: pointer;"
                     onclick="openUserModal('modal-user-{{ log.user_id }}')"
-                    title="View login frequency and duration for {{ log.user.username if log.user else 'User' }}"
+                    title="View login stats & details for {{ log.user.username if log.user else 'User' }}"
                   >
                     👁️ View
                   </button>
@@ -291,7 +374,7 @@
                 {% endif %}
               </td>
 
-              <!-- 8. Delete Option (Per Row) -->
+              <!-- 6. Delete Option (Per Row) -->
               <td style="text-align: right; white-space: nowrap;">
                 <form action="{{ url_for('admin.delete_audit_log', log_id=log.id) }}" method="POST" onsubmit="return confirm('Delete this audit log entry (#{{ log.id }})?');" style="margin: 0; display: inline;">
                   <button 
@@ -307,7 +390,7 @@
             </tr>
           {% else %}
             <tr>
-              <td colspan="8" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+              <td colspan="6" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
                 <em>No audit events found for this filter or date.</em>
               </td>
             </tr>
@@ -377,7 +460,7 @@
 
         <!-- Body / Detailed Sessions Table -->
         <div style="padding: 1rem 1.4rem; overflow-y: auto; flex: 1;">
-          <h5 style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: #475569;">Detailed Login History:</h5>
+          <h5 style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: #475569;">Detailed Login History &amp; Events:</h5>
           <table class="data-table" style="width: 100%; font-size: 0.825rem;">
             <thead>
               <tr>
@@ -439,87 +522,6 @@
       </div>
     </div>
   {% endfor %}
-
-  <!-- ========================================================================= -->
-  <!-- ALL UNIQUE USERS SUMMARY MODAL (NO REPEAT USERS TABLE) -->
-  <!-- ========================================================================= -->
-  <div id="all-users-summary-modal" class="custom-modal-overlay" style="display: none;">
-    <div class="custom-modal-content" style="max-width: 900px;">
-      <!-- Header -->
-      <div style="padding: 1.1rem 1.4rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border-top-left-radius: 12px; border-top-right-radius: 12px;">
-        <div>
-          <h4 style="margin: 0; font-size: 1.15rem; color: #0f172a;">
-            👥 All Users Login Summary ({{ unique_users_list|length }} Unique Users)
-          </h4>
-          <p style="margin: 3px 0 0 0; font-size: 0.8rem; color: #64748b;">
-            Aggregated by user &bull; No repeat users &bull; Shows login count and active time duration
-          </p>
-        </div>
-        <button type="button" onclick="closeUserModal('all-users-summary-modal')" style="background: none; border: none; font-size: 1.6rem; line-height: 1; cursor: pointer; color: #64748b; padding: 0.2rem 0.5rem;">&times;</button>
-      </div>
-
-      <!-- Table Body -->
-      <div style="padding: 1rem 1.4rem; overflow-y: auto; flex: 1;">
-        <table class="data-table" style="width: 100%; font-size: 0.85rem;">
-          <thead>
-            <tr>
-              <th>User</th>
-              <th>Role</th>
-              <th style="text-align: center; white-space: nowrap;">How Many Times Logged</th>
-              <th style="white-space: nowrap;">First Sign-In</th>
-              <th style="white-space: nowrap;">Most Recent Sign-In</th>
-              <th style="white-space: nowrap;">Time Duration</th>
-              <th style="text-align: right; white-space: nowrap;">View History</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for u in unique_users_list %}
-              <tr>
-                <td style="font-weight: 700; color: #1e3a8a; white-space: nowrap;">
-                  {{ u.username }}
-                  <div style="font-size: 0.725rem; font-weight: normal; color: #64748b;">{{ u.email }}</div>
-                </td>
-                <td>
-                  <span class="badge badge-{{ u.role|replace(' ', '_') }}">{{ u.role }}</span>
-                </td>
-                <td style="text-align: center; white-space: nowrap;">
-                  <span style="font-weight: 800; color: #047857; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 999px; font-size: 0.8rem;">
-                    🔥 {{ u.total_logins }}
-                  </span>
-                </td>
-                <td style="font-size: 0.8rem; color: #334155; white-space: nowrap;">
-                  {{ u.first_login.strftime('%Y-%m-%d %H:%M') }}
-                </td>
-                <td style="font-size: 0.8rem; color: #334155; white-space: nowrap;">
-                  {{ u.last_login.strftime('%Y-%m-%d %H:%M') }}
-                </td>
-                <td style="white-space: nowrap;">
-                  <span class="duration-pill">⏱️ {{ u.duration_label }}</span>
-                </td>
-                <td style="text-align: right; white-space: nowrap;">
-                  <button 
-                    type="button" 
-                    class="btn-action" 
-                    style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; font-weight: 700; font-size: 0.75rem; padding: 0.25rem 0.55rem; border-radius: 4px; cursor: pointer;"
-                    onclick="closeUserModal('all-users-summary-modal'); openUserModal('modal-user-{{ u.user_id }}');"
-                  >
-                    👁️ Details
-                  </button>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Footer -->
-      <div style="padding: 0.85rem 1.4rem; border-top: 1px solid #e2e8f0; background: #f8fafc; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; display: flex; justify-content: flex-end;">
-        <button type="button" class="btn-secondary" onclick="closeUserModal('all-users-summary-modal')" style="font-size: 0.825rem; padding: 0.4rem 0.9rem;">
-          Close
-        </button>
-      </div>
-    </div>
-  </div>
 </div>
 
 <script>
