@@ -3,54 +3,521 @@
 {% block title %}IT Self-Service AI Assistant - IT Helpdesk RAG{% endblock %}
 
 {% block content %}
-<div class="tickets-page-container" style="max-width: 900px; margin: 0 auto;">
-  <div class="page-header-row">
+<style>
+  /* =========================================================================
+     ADVANCED CHATBOT UI: Modern Glassmorphic, Conversational AI Styling
+     ========================================================================= */
+
+  .chatbot-wrapper {
+    max-width: 980px;
+    margin: 0 auto;
+    animation: fadeInChat 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes fadeInChat {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Chat Container Card */
+  .chatbot-container {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    box-shadow: 0 20px 30px -10px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(226, 232, 240, 0.6);
+    display: flex;
+    flex-direction: column;
+    height: 720px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Top Bar with Live Indicator */
+  .chatbot-topbar {
+    padding: 0.9rem 1.4rem;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%);
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    z-index: 10;
+  }
+  .ai-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+  .pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+    animation: pulseGlow 1.8s infinite;
+  }
+  @keyframes pulseGlow {
+    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+    70% { box-shadow: 0 0 0 7px rgba(16, 185, 129, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  }
+
+  /* Quick Suggestion Chips Carousel */
+  .chips-carousel {
+    padding: 0.75rem 1.4rem;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+  }
+  .chips-carousel::-webkit-scrollbar {
+    display: none;
+  }
+  .prompt-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.85rem;
+    border-radius: 999px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    font-size: 0.775rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    flex-shrink: 0;
+  }
+  .prompt-chip:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+    transform: translateY(-1.5px);
+    box-shadow: 0 3px 6px rgba(37, 99, 235, 0.12);
+  }
+
+  /* Messages Window */
+  .chat-messages-window {
+    flex: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    scroll-behavior: smooth;
+  }
+  .chat-messages-window::-webkit-scrollbar {
+    width: 6px;
+  }
+  .chat-messages-window::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 999px;
+  }
+
+  /* Message Rows */
+  .message-row {
+    display: flex;
+    gap: 0.75rem;
+    max-width: 88%;
+    animation: popInMessage 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes popInMessage {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .message-row-bot {
+    align-self: flex-start;
+  }
+  .message-row-user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
+
+  /* Avatars */
+  .chat-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+  }
+  .chat-avatar-bot {
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    color: #ffffff;
+    border: 1px solid #4338ca;
+  }
+  .chat-avatar-user {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: #ffffff;
+    border: 1px solid #0284c7;
+    font-weight: 800;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+  }
+
+  /* Bubbles */
+  .chat-bubble {
+    padding: 1.1rem 1.35rem;
+    border-radius: 18px;
+    font-size: 0.925rem;
+    line-height: 1.6;
+    position: relative;
+  }
+  .chat-bubble-bot {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-top-left-radius: 4px;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+    color: #1e293b;
+  }
+  .chat-bubble-user {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+    border-top-right-radius: 4px;
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+  }
+
+  .bubble-meta {
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+  .bubble-meta-bot {
+    color: #4338ca;
+  }
+  .bubble-meta-user {
+    color: rgba(255, 255, 255, 0.85);
+  }
+
+  /* Knowledge Source Citation Card */
+  .citation-container {
+    margin-top: 1.15rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid #e2e8f0;
+  }
+  .citation-title {
+    font-size: 0.775rem;
+    font-weight: 800;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.5rem;
+  }
+  .citation-chip {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.45rem 0.75rem;
+    margin-bottom: 0.4rem;
+    font-size: 0.8rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+  }
+  .citation-chip:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+  }
+
+  /* Copy Answer Button */
+  .copy-msg-btn {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 0.25rem 0.55rem;
+    font-size: 0.725rem;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.75rem;
+  }
+  .copy-msg-btn:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #cbd5e1;
+  }
+
+  /* Typing Bouncing Dots Indicator */
+  .typing-indicator-box {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.85rem 1.25rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    border-top-left-radius: 4px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.04);
+    align-self: flex-start;
+  }
+  .typing-dots {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .typing-dots span {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #6366f1;
+    animation: typingBounce 1.4s infinite ease-in-out both;
+  }
+  .typing-dots span:nth-child(1) { animation-delay: -0.32s; }
+  .typing-dots span:nth-child(2) { animation-delay: -0.16s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0s; }
+  @keyframes typingBounce {
+    0%, 80%, 100% { transform: scale(0); opacity: 0.4; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Floating Ticket Callout Banner */
+  .ticket-conversion-bar {
+    padding: 0.85rem 1.5rem;
+    background: linear-gradient(90deg, #ede9fe 0%, #e0e7ff 100%);
+    border-top: 1px solid #c7d2fe;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    animation: slideUpTicket 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes slideUpTicket {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .btn-ticket-create {
+    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+    color: #ffffff !important;
+    font-weight: 700;
+    font-size: 0.825rem;
+    padding: 0.45rem 1.15rem;
+    border-radius: 8px;
+    border: 1px solid #3730a3;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(79, 70, 229, 0.25);
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .btn-ticket-create:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 12px rgba(79, 70, 229, 0.35);
+    background: linear-gradient(135deg, #4338ca 0%, #3730a3 100%);
+  }
+
+  /* Sleek Input Form Container */
+  .chat-input-bar {
+    padding: 1rem 1.4rem;
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+  }
+  .input-capsule-wrapper {
+    display: flex;
+    align-items: center;
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 14px;
+    padding: 0.35rem 0.5rem 0.35rem 1.1rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  }
+  .input-capsule-wrapper:focus-within {
+    border-color: #3b82f6;
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+  }
+  .modern-chat-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 0.45rem 0;
+    font-size: 0.925rem;
+    color: #0f172a;
+    outline: none;
+    font-weight: 500;
+  }
+  .modern-chat-input::placeholder {
+    color: #94a3b8;
+    font-weight: normal;
+  }
+  .btn-send-gradient {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    padding: 0.55rem 1.25rem;
+    font-weight: 700;
+    font-size: 0.875rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  }
+  .btn-send-gradient:hover:not(:disabled) {
+    transform: translateY(-1.5px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+  }
+  .btn-send-gradient:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+</style>
+
+<div class="chatbot-wrapper">
+  <!-- Page Header -->
+  <div class="page-header-row" style="margin-bottom: 1.25rem; align-items: flex-start;">
     <div>
-      <h2>IT Self-Service AI Assistant</h2>
-      <p class="subtitle">Ask technical questions to get instant answers from company SOPs and historical incident resolutions</p>
+      <h2 style="font-size: 1.6rem; font-weight: 800; color: #0f172a; margin: 0 0 0.3rem 0; letter-spacing: -0.02em;">
+        IT Self-Service AI Assistant
+      </h2>
+      <p class="subtitle" style="margin: 0; color: #64748b; font-size: 0.9rem;">
+        Instant technical troubleshooting backed by verified company SOPs and historical incident records
+      </p>
     </div>
-    <a href="{{ url_for('tickets.create_ticket') }}" class="btn-primary" style="width: auto;">+ Direct Ticket Submission</a>
+    <a href="{{ url_for('tickets.create_ticket') }}" class="btn-primary" style="width: auto; font-size: 0.85rem; padding: 0.5rem 1.1rem; border-radius: 8px;">
+      + Direct Ticket Submission
+    </a>
   </div>
 
-  <div class="panel-card" style="padding: 0; display: flex; flex-direction: column; height: 600px; overflow: hidden;">
-    <!-- Chat Messages Window -->
-    <div id="chatMessages" style="flex: 1; padding: 1.5rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; background: #fbfcfe;">
+  <!-- Main Chatbot Card -->
+  <div class="chatbot-container">
+    <!-- Top Bar with Real-Time System Status -->
+    <div class="chatbot-topbar">
+      <div style="display: flex; align-items: center; gap: 0.6rem;">
+        <span class="ai-status-badge">
+          <span class="pulse-dot"></span>
+          AI RAG Engine Active &bull; Gemini LLM Connected
+        </span>
+        <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">
+          Knowledge Base Indexed
+        </span>
+      </div>
+
+      <button 
+        type="button" 
+        onclick="clearChatHistory()" 
+        style="background: none; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.775rem; font-weight: 600; color: #64748b; padding: 0.3rem 0.7rem; cursor: pointer; transition: all 0.2s;"
+        onmouseover="this.style.background='#f1f5f9'; this.style.color='#0f172a';"
+        onmouseout="this.style.background='none'; this.style.color='#64748b';"
+        title="Reset current chat session"
+      >
+        🔄 Reset Chat
+      </button>
+    </div>
+
+    <!-- Quick Question Suggestion Chips -->
+    <div class="chips-carousel">
+      <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; margin-right: 0.25rem;">Quick Help:</span>
+      <button type="button" class="prompt-chip" onclick="applyQuickPrompt('How do I fix VPN connection issues when it says connected but cannot reach internal servers?')">
+        🔑 VPN Connection Fix
+      </button>
+      <button type="button" class="prompt-chip" onclick="applyQuickPrompt('How do I restart the Windows Print Spooler service?')">
+        🖨️ Restart Print Spooler
+      </button>
+      <button type="button" class="prompt-chip" onclick="applyQuickPrompt('How to reset company domain password securely?')">
+        🔒 Reset Domain Password
+      </button>
+      <button type="button" class="prompt-chip" onclick="applyQuickPrompt('What are the standard Wi-Fi and proxy settings for office laptops?')">
+        📶 Wi-Fi &amp; Proxy Setup
+      </button>
+      <button type="button" class="prompt-chip" onclick="applyQuickPrompt('How to resolve Outlook email synchronization and mailbox full errors?')">
+        📧 Outlook Sync Fix
+      </button>
+    </div>
+
+    <!-- Messages Container -->
+    <div id="chatMessages" class="chat-messages-window">
       <!-- Welcome Message -->
-      <div class="comment-bubble comment-engineer" style="max-width: 80%; align-self: flex-start; background: #ffffff; border: 1px solid var(--card-border);">
-        <div class="comment-meta">
-          <strong>🤖 IT Helpdesk AI</strong> &bull; <span>Instant Assistant</span>
+      <div class="message-row message-row-bot">
+        <div class="chat-avatar chat-avatar-bot">✨</div>
+        <div class="chat-bubble chat-bubble-bot">
+          <div class="bubble-meta bubble-meta-bot">
+            <strong>🤖 IT Helpdesk AI Assistant</strong> &bull; <span style="color: #64748b; font-weight: normal;">Verified SOPs</span>
+          </div>
+          <div class="comment-text">
+            Hello <strong>{{ current_user.username }}</strong>! I'm your interactive IT Self-Service Assistant.
+            <br><br>
+            I can instantly guide you through troubleshooting <strong>VPN issues, network configurations, printer errors, password resets, and hardware requests</strong> from our company standard operating procedures.
+            <br><br>
+            What technical issue can I help you resolve today?
+          </div>
         </div>
-        <p class="comment-text">
-          Hello <strong>{{ current_user.username }}</strong>! I can assist you with common IT issues like VPN connectivity, network configuration, password resets, and printer spooler problems.
-          <br><br>
-          How can I help you today?
-        </p>
       </div>
     </div>
 
-    <!-- Convert to Ticket Callout (Hidden by default, shown after response) -->
-    <div id="ticketPromptBar" style="display: none; padding: 0.75rem 1.5rem; background: var(--ai-purple-light); border-top: 1px solid var(--ai-purple-border); align-items: center; justify-content: space-between;">
-      <span style="font-size: 0.85rem; color: #1e1b4b;">Need further technician assistance?</span>
+    <!-- Convert to Ticket Callout (Hidden by default, shown after AI response) -->
+    <div id="ticketPromptBar" class="ticket-conversion-bar" style="display: none;">
+      <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <span style="font-size: 1.1rem;">🎫</span>
+        <div>
+          <strong style="color: #312e81; font-size: 0.85rem;">Issue unresolved or need hands-on technician support?</strong>
+          <div style="font-size: 0.775rem; color: #4338ca;">We've prepared your ticket details automatically from this query.</div>
+        </div>
+      </div>
       <form id="createTicketForm" action="{{ url_for('tickets.create_ticket') }}" method="GET" style="margin: 0;">
         <input type="hidden" name="title" id="prefillTitle">
         <input type="hidden" name="description" id="prefillDesc">
-        <button type="submit" class="btn-primary" style="padding: 0.4rem 1rem; font-size: 0.85rem; width: auto;">Create Ticket From This Question &rarr;</button>
+        <button type="submit" class="btn-ticket-create">
+          Create Support Ticket &rarr;
+        </button>
       </form>
     </div>
 
     <!-- Input Bar -->
-    <div style="padding: 1rem 1.5rem; background: #ffffff; border-top: 1px solid var(--card-border);">
-      <form id="chatForm" style="display: flex; gap: 0.75rem;">
-        <input 
-          type="text" 
-          id="chatInput" 
-          class="form-input" 
-          placeholder="e.g. VPN says connected but I cannot access server, or how to restart print spooler..." 
-          required 
-          autocomplete="off"
-        >
-        <button type="submit" id="sendBtn" class="btn-primary" style="width: auto; padding: 0.65rem 1.75rem;">Ask AI</button>
+    <div class="chat-input-bar">
+      <form id="chatForm">
+        <div class="input-capsule-wrapper">
+          <input 
+            type="text" 
+            id="chatInput" 
+            class="modern-chat-input" 
+            placeholder="Type your technical question (e.g., 'VPN says connected but server not opening')..." 
+            required 
+            autocomplete="off"
+          >
+          <button type="submit" id="sendBtn" class="btn-send-gradient">
+            <span>Ask AI</span>
+            <span>➤</span>
+          </button>
+        </div>
       </form>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.45rem; padding: 0 0.5rem; font-size: 0.725rem; color: #94a3b8;">
+        <span>Press <kbd style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 1px 4px; font-size: 0.7rem; color: #475569;">Enter ↵</kbd> to submit</span>
+        <span>🔒 Secure Internal Enterprise Knowledge Base</span>
+      </div>
     </div>
   </div>
 </div>
@@ -64,19 +531,44 @@ const ticketPromptBar = document.getElementById('ticketPromptBar');
 const prefillTitle = document.getElementById('prefillTitle');
 const prefillDesc = document.getElementById('prefillDesc');
 
+function applyQuickPrompt(text) {
+  chatInput.value = text;
+  chatInput.focus();
+  chatForm.dispatchEvent(new Event('submit'));
+}
+
+function clearChatHistory() {
+  if (!confirm('Start a fresh conversation session?')) return;
+  chatMessages.innerHTML = `
+    <div class="message-row message-row-bot">
+      <div class="chat-avatar chat-avatar-bot">✨</div>
+      <div class="chat-bubble chat-bubble-bot">
+        <div class="bubble-meta bubble-meta-bot">
+          <strong>🤖 IT Helpdesk AI Assistant</strong> &bull; <span style="color: #64748b; font-weight: normal;">Verified SOPs</span>
+        </div>
+        <div class="comment-text">
+          Fresh session started. How can I assist you with your IT equipment or software today?
+        </div>
+      </div>
+    </div>
+  `;
+  ticketPromptBar.style.display = 'none';
+  chatInput.focus();
+}
+
 chatForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const query = chatInput.value.trim();
   if (!query) return;
 
-  // Append user bubble
-  appendMessage('user', '{{ current_user.username }}', query);
+  // 1. Append User Message
+  appendUserMessage(query);
   chatInput.value = '';
   chatInput.disabled = true;
   sendBtn.disabled = true;
 
-  // Append loading bubble
-  const loadingBubble = appendMessage('bot', '🤖 IT Helpdesk AI', '<em>Searching knowledge base & historical incidents...</em>');
+  // 2. Append Animated Typing / Thinking Indicator
+  const typingIndicator = appendTypingIndicator();
 
   try {
     const res = await fetch("{{ url_for('chat.query_bot') }}", {
@@ -85,29 +577,47 @@ chatForm.addEventListener('submit', async (e) => {
       body: JSON.stringify({ message: query })
     });
     const data = await res.json();
-    loadingBubble.remove();
+    typingIndicator.remove();
 
     let formattedAnswer = renderMarkdown(data.answer);
 
-    // Build citations HTML if any
+    // Build Citations Section if available
+    let citationsHtml = '';
     if (data.sources && data.sources.length > 0) {
-      formattedAnswer += '<div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid #e2e8f0; font-size: 0.825rem;"><strong>Supporting Knowledge Sources:</strong><ul style="margin: 0.25rem 0 0 1.25rem; color: #475569;">';
+      citationsHtml += `
+        <div class="citation-container">
+          <div class="citation-title">
+            <span>📖</span> Supporting SOP Knowledge Sources:
+          </div>
+      `;
       data.sources.forEach(s => {
-        formattedAnswer += `<li><strong>${s.document_name}</strong> (${s.section}) - Match: ${s.relevance}</li>`;
+        citationsHtml += `
+          <div class="citation-chip">
+            <div>
+              <strong>${s.document_name}</strong>
+              <span style="color: #64748b; font-size: 0.75rem; margin-left: 0.25rem;">(${s.section})</span>
+            </div>
+            <span style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 0.7rem; font-weight: 800; padding: 1px 6px; border-radius: 999px;">
+              Match: ${s.relevance}
+            </span>
+          </div>
+        `;
       });
-      formattedAnswer += '</ul></div>';
+      citationsHtml += '</div>';
     }
 
-    appendMessage('bot', '🤖 IT Helpdesk AI', formattedAnswer);
+    appendBotMessage(formattedAnswer, citationsHtml, data.answer);
 
     // Show ticket conversion prompt
-    prefillTitle.value = data.suggested_ticket_title;
-    prefillDesc.value = data.suggested_ticket_description;
-    ticketPromptBar.style.display = 'flex';
+    if (data.suggested_ticket_title) {
+      prefillTitle.value = data.suggested_ticket_title;
+      prefillDesc.value = data.suggested_ticket_description || query;
+      ticketPromptBar.style.display = 'flex';
+    }
 
   } catch (err) {
-    loadingBubble.remove();
-    appendMessage('bot', '🤖 IT Helpdesk AI', '<span style="color: red;">Error communicating with knowledge assistant. Please try again or create a ticket directly.</span>');
+    typingIndicator.remove();
+    appendBotMessage('<span style="color: #dc2626; font-weight: 600;">⚠ Error communicating with knowledge assistant. Please try again or create a ticket directly.</span>', '', '');
   } finally {
     chatInput.disabled = false;
     sendBtn.disabled = false;
@@ -116,6 +626,93 @@ chatForm.addEventListener('submit', async (e) => {
   }
 });
 
+function appendUserMessage(text) {
+  const row = document.createElement('div');
+  row.className = 'message-row message-row-user';
+  
+  const userInit = '{{ current_user.username[:1] }}'.toUpperCase();
+  row.innerHTML = `
+    <div class="chat-avatar chat-avatar-user">${userInit}</div>
+    <div class="chat-bubble chat-bubble-user">
+      <div class="bubble-meta bubble-meta-user">
+        <strong>{{ current_user.username }}</strong> &bull; <span>Just now</span>
+      </div>
+      <div>${escapeHtml(text)}</div>
+    </div>
+  `;
+  chatMessages.appendChild(row);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function appendBotMessage(formattedText, citationsHtml, rawAnswer) {
+  const row = document.createElement('div');
+  row.className = 'message-row message-row-bot';
+
+  const msgId = 'msg-' + Date.now();
+  row.innerHTML = `
+    <div class="chat-avatar chat-avatar-bot">✨</div>
+    <div class="chat-bubble chat-bubble-bot" id="${msgId}">
+      <div class="bubble-meta bubble-meta-bot">
+        <strong>🤖 IT Helpdesk AI Assistant</strong> &bull; <span style="color: #64748b; font-weight: normal;">Just now</span>
+      </div>
+      <div class="comment-text">${formattedText}</div>
+      ${citationsHtml}
+      ${rawAnswer ? `
+        <button type="button" class="copy-msg-btn" onclick="copyAnswerText(this, '${escapeForAttribute(rawAnswer)}')">
+          <span>📋</span> Copy Solution
+        </button>
+      ` : ''}
+    </div>
+  `;
+  chatMessages.appendChild(row);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function appendTypingIndicator() {
+  const row = document.createElement('div');
+  row.className = 'message-row message-row-bot';
+  row.innerHTML = `
+    <div class="chat-avatar chat-avatar-bot" style="opacity: 0.8;">✨</div>
+    <div class="typing-indicator-box">
+      <div class="typing-dots">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      <span style="font-size: 0.8rem; font-weight: 600; color: #64748b;">
+        Searching SOP knowledge base &amp; formulating verified steps...
+      </span>
+    </div>
+  `;
+  chatMessages.appendChild(row);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return row;
+}
+
+function copyAnswerText(btn, text) {
+  navigator.clipboard.writeText(text).then(() => {
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<span>✓</span> Copied to Clipboard!';
+    btn.style.color = '#047857';
+    btn.style.borderColor = '#a7f3d0';
+    setTimeout(() => {
+      btn.innerHTML = originalText;
+      btn.style.color = '';
+      btn.style.borderColor = '';
+    }, 2000);
+  });
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function escapeForAttribute(text) {
+  return text.replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n');
+}
+
 function renderMarkdown(text) {
   if (!text) return '';
   let html = text;
@@ -123,44 +720,24 @@ function renderMarkdown(text) {
   html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   
   // Bold **text**
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #0f172a;">$1</strong>');
   
-  // Italic *text* or _text_
+  // Italic *text*
   html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
   
   // Inline code `code`
-  html = html.replace(/`(.*?)`/g, '<code style="background: #f1f5f9; color: #0f172a; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.9em;">$1</code>');
+  html = html.replace(/`(.*?)`/g, '<code style="background: #f1f5f9; color: #0284c7; padding: 2px 6px; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.875em; border: 1px solid #e2e8f0; font-weight: 600;">$1</code>');
   
   // Bullet lists (- or * at start of line)
-  html = html.replace(/(?:^|\n)[-*]\s+(.+)/g, '<li style="margin-left: 1.25rem; margin-bottom: 0.25rem;">$1</li>');
+  html = html.replace(/(?:^|\n)[-*]\s+(.+)/g, '<li style="margin-left: 1.25rem; margin-bottom: 0.35rem; color: #334155;">$1</li>');
   
   // Numbered lists (1. 2. etc)
-  html = html.replace(/(?:^|\n)(\d+)\.\s+(.+)/g, '<li style="margin-left: 1.25rem; margin-bottom: 0.25rem;"><strong>$1.</strong> $2</li>');
+  html = html.replace(/(?:^|\n)(\d+)\.\s+(.+)/g, '<li style="margin-left: 1.25rem; margin-bottom: 0.35rem; color: #334155;"><strong style="color: #1e3a8a;">Step $1:</strong> $2</li>');
   
-  // Newlines to <br>
+  // Double newlines to <br><br> and single to <br>
   html = html.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
   
   return html;
 }
-
-function appendMessage(sender, author, text) {
-  const bubble = document.createElement('div');
-  bubble.className = 'comment-bubble ' + (sender === 'user' ? 'comment-employee' : 'comment-engineer');
-  bubble.style.maxWidth = '85%';
-  bubble.style.alignSelf = sender === 'user' ? 'flex-end' : 'flex-start';
-  bubble.style.background = sender === 'user' ? 'var(--primary-light)' : '#ffffff';
-  bubble.style.border = sender === 'user' ? '1px solid #bfdbfe' : '1px solid var(--card-border)';
-  
-  bubble.innerHTML = `
-    <div class="comment-meta">
-      <strong>${author}</strong> &bull; <span>Just now</span>
-    </div>
-    <div class="comment-text">${text}</div>
-  `;
-  chatMessages.appendChild(bubble);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-  return bubble;
-}
 </script>
 {% endblock %}
-

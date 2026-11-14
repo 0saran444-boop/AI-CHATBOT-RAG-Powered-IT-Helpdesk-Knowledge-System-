@@ -4,31 +4,245 @@
 
 {% block content %}
 <style>
-  /* Status Toggle Switch inside Audit Logs */
+  /* =========================================================================
+     ADVANCED STYLING: Modern Glassmorphic, Elevated UI & Micro-Interactions
+     ========================================================================= */
+
+  /* Page Shell & Animation */
+  .audit-shell {
+    animation: fadeInPage 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes fadeInPage {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Metric Stat Cards */
+  .modern-stat-card {
+    background: linear-gradient(135deg, #ffffff 0%, #fbfcfd 100%);
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1.25rem 1.4rem;
+    box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.04), 0 2px 4px -2px rgba(15, 23, 42, 0.03);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  .modern-stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 20px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.04);
+    border-color: #cbd5e1;
+  }
+  .modern-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3.5px;
+  }
+  .card-glow-emerald::before {
+    background: linear-gradient(90deg, #10b981 0%, #34d399 100%);
+  }
+  .card-glow-rose::before {
+    background: linear-gradient(90deg, #ef4444 0%, #f87171 100%);
+  }
+  .card-glow-blue::before {
+    background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%);
+  }
+  .stat-icon-wrapper {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+  }
+
+  /* Segmented Quick Filter Navigation */
+  .filter-panel {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 0.9rem 1.25rem;
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.03);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .tab-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 1rem;
+    font-size: 0.825rem;
+    font-weight: 700;
+    border-radius: 999px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: 1.5px solid transparent;
+  }
+  .tab-pill-btn:hover {
+    transform: translateY(-1px);
+  }
+  .tab-pill-active-emerald {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff !important;
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.28);
+    border-color: #059669;
+  }
+  .tab-pill-active-blue {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: #ffffff !important;
+    box-shadow: 0 4px 10px rgba(59, 130, 246, 0.28);
+    border-color: #2563eb;
+  }
+  .tab-pill-active-slate {
+    background: linear-gradient(135deg, #475569 0%, #334155 100%);
+    color: #ffffff !important;
+    box-shadow: 0 4px 10px rgba(71, 85, 105, 0.28);
+    border-color: #334155;
+  }
+  .tab-pill-inactive {
+    background: #f8fafc;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+  }
+  .tab-pill-inactive:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #cbd5e1;
+  }
+
+  /* Date Input Styling */
+  .modern-date-input {
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 0.35rem 0.65rem;
+    font-size: 0.825rem;
+    color: #1e293b;
+    font-weight: 600;
+    background: #ffffff;
+    transition: all 0.2s ease;
+    outline: none;
+  }
+  .modern-date-input:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  }
+
+  /* Advanced Table Container */
+  .modern-table-container {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.04), 0 2px 4px -2px rgba(15, 23, 42, 0.02);
+    overflow: hidden;
+  }
+  .modern-table-header-bar {
+    padding: 1.15rem 1.4rem;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%);
+  }
+  .audit-data-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  .audit-data-table th {
+    background: #f8fafc;
+    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.85rem 1.1rem;
+    border-bottom: 1.5px solid #e2e8f0;
+  }
+  .audit-data-table td {
+    padding: 0.95rem 1.1rem;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+    transition: background-color 0.15s ease;
+  }
+  .audit-data-table tbody tr:hover td {
+    background-color: #f8fafc;
+  }
+  .audit-data-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* User Info Cell with Avatar Initials */
+  .user-cell-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+  .user-avatar-circle {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #e0f2fe 0%, #bfdbfe 100%);
+    color: #0369a1;
+    font-weight: 800;
+    font-size: 0.825rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid #bae6fd;
+    text-transform: uppercase;
+  }
+  .system-avatar-circle {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid #e2e8f0;
+  }
+
+  /* Status Toggle Switch: Ultra Modern iOS/macOS Style */
   .status-toggle-btn {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.2rem 0.65rem 0.2rem 0.3rem;
+    padding: 0.25rem 0.65rem 0.25rem 0.35rem;
     border-radius: 999px;
     cursor: pointer;
     font-size: 0.775rem;
     font-weight: 700;
     border: 1.5px solid transparent;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     background: #ffffff;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
     box-sizing: border-box;
     text-decoration: none;
   }
   .status-toggle-btn.is-on {
     background: #ecfdf5;
-    border-color: #6ee7b7;
+    border-color: #a7f3d0;
     color: #065f46;
   }
   .status-toggle-btn.is-on:hover {
     background: #d1fae5;
-    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+    border-color: #6ee7b7;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
     transform: translateY(-1px);
   }
   .status-toggle-btn.is-off {
@@ -38,7 +252,8 @@
   }
   .status-toggle-btn.is-off:hover {
     background: #f1f5f9;
-    box-shadow: 0 2px 4px rgba(148, 163, 184, 0.2);
+    border-color: #94a3b8;
+    box-shadow: 0 2px 6px rgba(148, 163, 184, 0.25);
     transform: translateY(-1px);
   }
   .switch-track {
@@ -53,9 +268,11 @@
   }
   .is-on .switch-track {
     background-color: #10b981;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
   }
   .is-off .switch-track {
     background-color: #94a3b8;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
   }
   .switch-thumb {
     width: 14px;
@@ -66,7 +283,7 @@
     top: 3px;
     left: 3px;
     transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
   }
   .is-on .switch-thumb {
     transform: translateX(16px);
@@ -104,13 +321,67 @@
     height: 7px;
     border-radius: 50%;
     background: #16a34a;
+    box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
   }
+
+  /* View Option Interactive Button */
+  .view-option-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.775rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+    border: 1.5px solid #86efac;
+    color: #15803d;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 3px rgba(16, 185, 129, 0.12);
+    text-decoration: none;
+  }
+  .view-option-chip:hover {
+    background: linear-gradient(135deg, #dcfce7 0%, #d1fae5 100%);
+    border-color: #4ade80;
+    color: #166534;
+    transform: translateY(-1.5px);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.22);
+  }
+
+  /* Delete Action Button */
+  .delete-chip-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.3rem 0.65rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .delete-chip-btn:hover {
+    background: #fee2e2;
+    border-color: #f87171;
+    color: #b91c1c;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.15);
+  }
+
+  /* =========================================================================
+     PREMIUM MODAL: Glassmorphic Backdrop, Slide-In Animation & Cards
+     ========================================================================= */
   .custom-modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.65);
-    backdrop-filter: blur(4px);
-    z-index: 9999;
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 99999;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -118,169 +389,186 @@
   }
   .custom-modal-content {
     background: #ffffff;
-    border-radius: 12px;
+    border-radius: 16px;
     width: 100%;
-    max-width: 820px;
-    max-height: 85vh;
+    max-width: 860px;
+    max-height: 88vh;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
-    border: 1px solid #e2e8f0;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(226, 232, 240, 0.8);
+    overflow: hidden;
+    animation: modalSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   }
-  .duration-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.3rem 0.75rem;
-    border-radius: 999px;
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    color: #1e40af;
-    font-size: 0.8rem;
-    font-weight: 700;
+  @keyframes modalSlideIn {
+    from { opacity: 0; transform: scale(0.96) translateY(12px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
   }
-  .stat-card-badge {
-    background: #f8fafc;
+
+  .modal-badge-card {
+    background: #ffffff;
     border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 0.6rem 0.85rem;
+    border-radius: 12px;
+    padding: 0.85rem 1.1rem;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  }
+  .modal-badge-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 4px;
   }
 </style>
 
-<div class="tickets-page-container">
+<div class="tickets-page-container audit-shell">
   <!-- Page Header -->
   <div class="page-header-row" style="margin-bottom: 1.5rem; align-items: flex-start;">
     <div>
-      <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.35rem;">
-        <span class="category-pill" style="background: #e0f2fe; color: #0369a1; font-weight: 600;">
+      <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.45rem;">
+        <span class="category-pill" style="background: #e0f2fe; color: #0369a1; font-weight: 700; border: 1px solid #bae6fd; font-size: 0.775rem;">
           ⚡ 1-Month Auto-Retention: Logs &gt;30 days automatically purged
         </span>
         {% if purged_auto_count and purged_auto_count > 0 %}
-          <span class="category-pill" style="background: #f0fdf4; color: #166534; font-weight: 600;">
+          <span class="category-pill" style="background: #ecfdf5; color: #047857; font-weight: 700; border: 1px solid #a7f3d0; font-size: 0.775rem;">
             ✓ Auto-purged {{ purged_auto_count }} expired logs
           </span>
         {% endif %}
       </div>
-      <h2>Security &amp; Operational Audit Trail</h2>
-      <p class="subtitle">Complete audit record of user logins, role changes, tickets, and user account status</p>
+      <h2 style="font-size: 1.6rem; font-weight: 800; color: #0f172a; margin: 0 0 0.3rem 0; letter-spacing: -0.02em;">
+        Security &amp; Operational Audit Trail
+      </h2>
+      <p class="subtitle" style="margin: 0; color: #64748b; font-size: 0.9rem;">
+        Real-time security log tracking, RBAC account status, and user session intelligence
+      </p>
     </div>
     
-    <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
-      <a href="{{ url_for('admin.dashboard') }}" class="btn-secondary">&larr; Back to Admin Console</a>
+    <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
+      <a href="{{ url_for('admin.dashboard') }}" class="btn-secondary" style="font-size: 0.825rem; font-weight: 600; padding: 0.45rem 0.95rem; border-radius: 8px;">
+        &larr; Back to Admin Console
+      </a>
       <!-- Bulk Purge Menu -->
       <form action="{{ url_for('admin.purge_audit_logs') }}" method="POST" style="margin: 0;" onsubmit="return confirm('Purge audit logs older than 30 days?');">
         <input type="hidden" name="purge_mode" value="older_than_30_days">
-        <button type="submit" class="btn-secondary" style="color: #b45309; border-color: #fde68a; background: #fffbeb; font-size: 0.8rem; padding: 0.45rem 0.85rem;" title="Manually purge logs older than 30 days">
+        <button type="submit" class="delete-chip-btn" style="background: #fffbeb; color: #b45309; border-color: #fde68a; padding: 0.45rem 0.85rem; font-size: 0.8rem; font-weight: 700;" title="Manually purge logs older than 30 days">
           🗑️ Purge &gt;30 Days
         </button>
       </form>
     </div>
   </div>
 
-  <!-- Metric Stats Row -->
-  <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+  <!-- Metric Stats Row with Modern Elevated Cards -->
+  <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1.15rem; margin-bottom: 1.5rem;">
     <!-- Today's Successful Logins -->
     <a href="{{ url_for('admin.audit_logs', filter='today_logins') }}" style="text-decoration: none; color: inherit;">
-      <div class="stat-card" style="background: #ffffff; border-left: 4px solid #10b981; padding: 1rem 1.25rem;">
-        <span class="stat-label">Today's Logins</span>
-        <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-top: 0.25rem;">
-          <span class="stat-number stat-success">{{ today_logins_count }}</span>
-          <span style="font-size: 0.8rem; color: #64748b;">successful sign-ins</span>
+      <div class="modern-stat-card card-glow-emerald">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+          <span style="font-size: 0.775rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Today's Logins</span>
+          <span class="stat-icon-wrapper" style="background: #ecfdf5; color: #059669;">🔑</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+          <span style="font-size: 1.85rem; font-weight: 800; color: #047857; line-height: 1;">{{ today_logins_count }}</span>
+          <span style="font-size: 0.8rem; font-weight: 600; color: #10b981;">successful sign-ins</span>
         </div>
       </div>
     </a>
 
     <!-- Today's Failed Logins -->
     <a href="{{ url_for('admin.audit_logs', filter='today_logins') }}" style="text-decoration: none; color: inherit;">
-      <div class="stat-card" style="background: #ffffff; border-left: 4px solid #ef4444; padding: 1rem 1.25rem;">
-        <span class="stat-label">Today's Failed Attempts</span>
-        <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-top: 0.25rem;">
-          <span class="stat-number stat-danger">{{ today_failed_count }}</span>
-          <span style="font-size: 0.8rem; color: #64748b;">blocked / invalid</span>
+      <div class="modern-stat-card card-glow-rose">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+          <span style="font-size: 0.775rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Today's Failed Attempts</span>
+          <span class="stat-icon-wrapper" style="background: #fef2f2; color: #dc2626;">🛡️</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+          <span style="font-size: 1.85rem; font-weight: 800; color: #b91c1c; line-height: 1;">{{ today_failed_count }}</span>
+          <span style="font-size: 0.8rem; font-weight: 600; color: #ef4444;">blocked / invalid</span>
         </div>
       </div>
     </a>
 
     <!-- Total Retained Records -->
-    <div class="stat-card" style="background: #ffffff; border-left: 4px solid #3b82f6; padding: 1rem 1.25rem;">
-      <span class="stat-label">Retained Audit Records</span>
-      <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-top: 0.25rem;">
-        <span class="stat-number" style="color: #1e3a8a;">{{ total_logs_count }}</span>
-        <span style="font-size: 0.8rem; color: #64748b;">active (&lt; 30 days)</span>
+    <div class="modern-stat-card card-glow-blue">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+        <span style="font-size: 0.775rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Retained Audit Records</span>
+        <span class="stat-icon-wrapper" style="background: #eff6ff; color: #2563eb;">🗄️</span>
+      </div>
+      <div style="display: flex; align-items: baseline; gap: 0.5rem;">
+        <span style="font-size: 1.85rem; font-weight: 800; color: #1e3a8a; line-height: 1;">{{ total_logs_count }}</span>
+        <span style="font-size: 0.8rem; font-weight: 600; color: #3b82f6;">active (&lt; 30 days)</span>
       </div>
     </div>
   </div>
 
-  <!-- Filter & Date-Wise Navigation Bar -->
-  <div class="panel-card" style="background: #ffffff; border: 1px solid var(--card-border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+  <!-- Segmented Quick Filter Navigation Bar -->
+  <div class="filter-panel">
     <!-- Quick Filter Tabs -->
     <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
       <a 
         href="{{ url_for('admin.audit_logs', filter='today_logins') }}" 
-        class="btn-action" 
-        style="padding: 0.45rem 0.9rem; font-size: 0.825rem; font-weight: 600; border-radius: 6px; text-decoration: none; {% if filter_type == 'today_logins' and not selected_date %}background: #10b981; color: #ffffff; border-color: #10b981;{% else %}background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;{% endif %}"
+        class="tab-pill-btn {% if filter_type == 'today_logins' and not selected_date %}tab-pill-active-emerald{% else %}tab-pill-inactive{% endif %}"
       >
         🌟 Today's Logins ({{ today_date_str }})
       </a>
 
       <a 
         href="{{ url_for('admin.audit_logs', filter='all_logins') }}" 
-        class="btn-action" 
-        style="padding: 0.45rem 0.9rem; font-size: 0.825rem; font-weight: 600; border-radius: 6px; text-decoration: none; {% if filter_type == 'all_logins' and not selected_date %}background: #3b82f6; color: #ffffff; border-color: #3b82f6;{% else %}background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;{% endif %}"
+        class="tab-pill-btn {% if filter_type == 'all_logins' and not selected_date %}tab-pill-active-blue{% else %}tab-pill-inactive{% endif %}"
       >
         🔑 All Sign-In Logs
       </a>
 
       <a 
-        href="{{ url_for('admin.audit_logs', filter='all') }}" 
-        class="btn-action" 
-        style="padding: 0.45rem 0.9rem; font-size: 0.825rem; font-weight: 600; border-radius: 6px; text-decoration: none; {% if filter_type == 'all' and not selected_date %}background: #475569; color: #ffffff; border-color: #475569;{% else %}background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;{% endif %}"
+        href="{{ url_for('admin.audit_logs') }}" 
+        class="tab-pill-btn {% if filter_type == 'all' and not selected_date %}tab-pill-active-slate{% else %}tab-pill-inactive{% endif %}"
       >
         📋 All System Activity
       </a>
     </div>
 
     <!-- Date-Wise Filter Form -->
-    <form action="{{ url_for('admin.audit_logs') }}" method="GET" style="margin: 0; display: flex; gap: 0.5rem; align-items: center;">
+    <form action="{{ url_for('admin.audit_logs') }}" method="GET" style="margin: 0; display: flex; gap: 0.45rem; align-items: center;">
       <input type="hidden" name="filter" value="{{ filter_type }}">
-      <label style="font-size: 0.825rem; font-weight: 600; color: #334155; white-space: nowrap;">
+      <label style="font-size: 0.8rem; font-weight: 700; color: #475569; white-space: nowrap;">
         📅 Date-wise:
       </label>
       <input 
         type="date" 
         name="date" 
         value="{{ selected_date }}" 
-        class="form-input" 
-        style="padding: 0.35rem 0.6rem; font-size: 0.825rem; width: auto;"
+        class="modern-date-input" 
         onchange="this.form.submit()"
       >
       {% if selected_date %}
-        <a href="{{ url_for('admin.audit_logs', filter=filter_type) }}" class="btn-action" style="padding: 0.35rem 0.6rem; font-size: 0.775rem; text-decoration: none; color: #dc2626; background: #fef2f2; border: 1px solid #fecaca;">
+        <a href="{{ url_for('admin.audit_logs', filter=filter_type) }}" class="delete-chip-btn" style="padding: 0.35rem 0.65rem; text-decoration: none;" title="Reset Date Filter">
           ✕ Clear Date
         </a>
       {% endif %}
     </form>
   </div>
 
-  <!-- Audit Logs Main Table -->
-  <div class="section-card">
-    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-      <h3 style="margin: 0;">
+  <!-- Audit Logs Main Data Table Container -->
+  <div class="modern-table-container">
+    <div class="modern-table-header-bar">
+      <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 0.5rem;">
         {% if filter_type == 'today_logins' and not selected_date %}
-          🌟 Today's Login Activity ({{ logs|length }} Records)
+          <span style="color: #059669;">●</span> Today's Login Activity
         {% elif filter_type == 'all_logins' and not selected_date %}
-          🔑 User Authentication Log History ({{ logs|length }} Records)
+          <span style="color: #2563eb;">●</span> User Authentication History
         {% elif selected_date %}
-          📅 Audit Logs for {{ selected_date }} ({{ logs|length }} Records)
+          <span style="color: #d97706;">●</span> Audit Records for {{ selected_date }}
         {% else %}
-          System Audit Trail (Showing last {{ logs|length }} of {{ total_logs_count }} active logs)
+          <span style="color: #475569;">●</span> System Audit Trail
         {% endif %}
+        <span style="font-size: 0.8rem; font-weight: 600; color: #64748b; margin-left: 0.25rem;">({{ logs|length }} records)</span>
       </h3>
 
       {% if logs %}
         <form action="{{ url_for('admin.purge_audit_logs') }}" method="POST" style="margin: 0;" onsubmit="return confirm('Clear all audit logs matching this view? This cannot be undone.');">
           <input type="hidden" name="purge_mode" value="{% if filter_type == 'today_logins' %}today_logins{% else %}all{% endif %}">
-          <button type="submit" class="btn-action" style="color: var(--danger); font-size: 0.75rem; padding: 0.3rem 0.65rem; border-radius: 4px;" title="Clear all logs in this view">
+          <button type="submit" class="delete-chip-btn" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;" title="Clear all logs in this view">
             🗑️ Clear {% if filter_type == 'today_logins' %}Today's Logins{% else %}All Logs{% endif %}
           </button>
         </form>
@@ -288,34 +576,48 @@
     </div>
 
     <div class="table-responsive">
-      <table class="data-table">
+      <table class="audit-data-table">
         <thead>
           <tr>
-            <th style="white-space: nowrap;">Timestamp / Date</th>
+            <th style="white-space: nowrap; width: 180px;">Timestamp / Date</th>
             <th>User</th>
-            <th style="text-align: center; white-space: nowrap;">Status (Active / Inactive)</th>
-            <th>Entity</th>
-            <th style="text-align: center; white-space: nowrap;">View Option</th>
-            <th style="text-align: right; white-space: nowrap;">Delete</th>
+            <th style="text-align: center; white-space: nowrap; width: 170px;">Status (Active / Inactive)</th>
+            <th style="width: 140px;">Entity</th>
+            <th style="text-align: center; white-space: nowrap; width: 170px;">View Option</th>
+            <th style="text-align: right; white-space: nowrap; width: 100px;">Delete</th>
           </tr>
         </thead>
         <tbody>
           {% for log in logs %}
             <tr>
               <!-- 1. Timestamp / Date -->
-              <td style="font-size: 0.825rem; color: var(--text-muted); white-space: nowrap;">
-                <strong style="color: #0f172a;">{{ log.timestamp.strftime('%Y-%m-%d') }}</strong><br>
-                <span style="font-size: 0.75rem; color: #64748b;">{{ log.timestamp.strftime('%H:%M:%S') }}</span>
+              <td style="white-space: nowrap;">
+                <div style="font-weight: 700; color: #0f172a; font-size: 0.825rem; display: flex; align-items: center; gap: 0.35rem;">
+                  <span>📅</span> {{ log.timestamp.strftime('%Y-%m-%d') }}
+                </div>
+                <div style="font-size: 0.75rem; color: #64748b; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; margin-top: 1px;">
+                  ⏱️ {{ log.timestamp.strftime('%H:%M:%S') }}
+                </div>
               </td>
 
-              <!-- 2. User -->
-              <td style="font-weight: 600; white-space: nowrap;">
-                {% if log.user %}
-                  <span style="color: #1e3a8a;">{{ log.user.username }}</span>
-                  <div style="font-size: 0.725rem; font-weight: normal; color: #64748b;">{{ log.user.email }}</div>
-                {% else %}
-                  <span style="color: #64748b; font-style: italic;">System / Automated</span>
-                {% endif %}
+              <!-- 2. User with Avatar Circle -->
+              <td style="white-space: nowrap;">
+                <div class="user-cell-wrapper">
+                  {% if log.user %}
+                    <div class="user-avatar-circle">
+                      {{ log.user.username[:1] }}
+                    </div>
+                    <div>
+                      <div style="font-weight: 700; color: #1e3a8a; font-size: 0.85rem;">{{ log.user.username }}</div>
+                      <div style="font-size: 0.725rem; color: #64748b;">{{ log.user.email }}</div>
+                    </div>
+                  {% else %}
+                    <div class="system-avatar-circle">⚙️</div>
+                    <div>
+                      <div style="font-weight: 600; color: #475569; font-size: 0.825rem; font-style: italic;">System / Automated</div>
+                    </div>
+                  {% endif %}
+                </div>
               </td>
 
               <!-- 3. Status (Active / Inactive Button) -->
@@ -347,30 +649,36 @@
                     </form>
                   {% endif %}
                 {% else %}
-                  <span style="color: #94a3b8; font-size: 0.775rem;">System</span>
+                  <span style="color: #94a3b8; font-size: 0.775rem; font-weight: 600;">System</span>
                 {% endif %}
               </td>
 
               <!-- 4. Entity (Type & ID) -->
               <td style="white-space: nowrap; font-size: 0.85rem;">
-                <span class="category-pill" style="font-size: 0.75rem;">{{ log.entity_type }}</span>
-                {% if log.entity_id %}<code>#{{ log.entity_id }}</code>{% endif %}
+                <span class="category-pill" style="font-size: 0.75rem; font-weight: 700; background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0;">
+                  {{ log.entity_type }}
+                </span>
+                {% if log.entity_id %}
+                  <code style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 2px 5px; border-radius: 4px; font-size: 0.775rem; color: #0284c7; font-weight: 700;">#{{ log.entity_id }}</code>
+                {% endif %}
               </td>
 
-              <!-- 5. View Option (Check how many times logged and time duration) -->
+              <!-- 5. View Option: Interactive Chip Showing Exact Login Frequency -->
               <td style="text-align: center; white-space: nowrap;">
                 {% if log.user_id and log.user_id in user_stats %}
                   <button 
                     type="button" 
-                    class="btn-action" 
-                    style="background: #f0fdf4; border: 1px solid #86efac; color: #166534; font-weight: 700; font-size: 0.775rem; padding: 0.25rem 0.65rem; border-radius: 4px; cursor: pointer;"
+                    class="view-option-chip"
                     onclick="openUserModal('modal-user-{{ log.user_id }}')"
-                    title="View login stats & details for {{ log.user.username if log.user else 'User' }}"
+                    title="View detailed login counts & sessions for {{ log.user.username if log.user else 'User' }}"
                   >
-                    👁️ View ({{ user_stats[log.user_id].total_logins }} {% if user_stats[log.user_id].total_logins == 1 %}login{% else %}logins{% endif %})
+                    <span>👁️ View</span>
+                    <span style="background: #ffffff; color: #166534; font-size: 0.7rem; font-weight: 800; padding: 1px 6px; border-radius: 999px; border: 1px solid #86efac;">
+                      {{ user_stats[log.user_id].total_logins }} {% if user_stats[log.user_id].total_logins == 1 %}login{% else %}logins{% endif %}
+                    </span>
                   </button>
                 {% else %}
-                  <span style="color: #94a3b8; font-size: 0.75rem;">-</span>
+                  <span style="color: #cbd5e1; font-size: 0.85rem;">&bull;&bull;&bull;</span>
                 {% endif %}
               </td>
 
@@ -379,9 +687,8 @@
                 <form action="{{ url_for('admin.delete_audit_log', log_id=log.id) }}" method="POST" onsubmit="return confirm('Delete this audit log entry (#{{ log.id }})?');" style="margin: 0; display: inline;">
                   <button 
                     type="submit" 
-                    class="btn-action" 
-                    style="color: var(--danger); background: #fef2f2; border: 1px solid #fecaca; font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 4px;"
-                    title="Delete this audit log"
+                    class="delete-chip-btn"
+                    title="Delete this audit log entry"
                   >
                     🗑️ Delete
                   </button>
@@ -390,8 +697,10 @@
             </tr>
           {% else %}
             <tr>
-              <td colspan="6" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
-                <em>No audit events found for this filter or date.</em>
+              <td colspan="6" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+                <div style="font-size: 2rem; margin-bottom: 0.5rem;">📋</div>
+                <div style="font-weight: 700; color: #334155; font-size: 0.95rem;">No audit events found</div>
+                <div style="font-size: 0.8rem; color: #64748b;">No log records match this date or filter view.</div>
               </td>
             </tr>
           {% endfor %}
@@ -401,101 +710,128 @@
   </div>
 
   <!-- ========================================================================= -->
-  <!-- MODALS FOR EACH USER'S VIEW OPTION (HOW MANY TIMES LOGGED & TIME DURATION) -->
+  <!-- PREMIUM USER VIEW MODALS: Detailed Login Statistics & Session History     -->
   <!-- ========================================================================= -->
   {% for uid, u in user_stats.items() %}
     <div id="modal-user-{{ uid }}" class="custom-modal-overlay" style="display: none;">
       <div class="custom-modal-content">
-        <!-- Header -->
-        <div style="padding: 1.1rem 1.4rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border-top-left-radius: 12px; border-top-right-radius: 12px;">
-          <div>
-            <h4 style="margin: 0; font-size: 1.15rem; color: #0f172a; display: flex; align-items: center; gap: 0.5rem;">
-              👤 User Login Stats &bull; <span style="color: #2563eb;">{{ u.username }}</span>
-            </h4>
-            <p style="margin: 3px 0 0 0; font-size: 0.8rem; color: #64748b;">
-              Role: <strong>{{ u.role }}</strong> &bull; Email: {{ u.email }}
-            </p>
+        <!-- Modal Header -->
+        <div style="padding: 1.25rem 1.6rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div class="user-avatar-circle" style="width: 42px; height: 42px; font-size: 1rem;">
+              {{ u.username[:1] }}
+            </div>
+            <div>
+              <h4 style="margin: 0; font-size: 1.2rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 0.5rem;">
+                {{ u.username }}
+                <span class="category-pill" style="font-size: 0.7rem; font-weight: 700; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;">
+                  {{ u.role }}
+                </span>
+              </h4>
+              <p style="margin: 2px 0 0 0; font-size: 0.8rem; color: #64748b;">
+                {{ u.email }}
+              </p>
+            </div>
           </div>
-          <button type="button" onclick="closeUserModal('modal-user-{{ uid }}')" style="background: none; border: none; font-size: 1.6rem; line-height: 1; cursor: pointer; color: #64748b; padding: 0.2rem 0.5rem;">&times;</button>
+          <button 
+            type="button" 
+            onclick="closeUserModal('modal-user-{{ uid }}')" 
+            style="background: #ffffff; border: 1px solid #e2e8f0; width: 34px; height: 34px; border-radius: 50%; font-size: 1.25rem; line-height: 1; cursor: pointer; color: #64748b; display: flex; align-items: center; justify-content: center; transition: all 0.2s;"
+            onmouseover="this.style.background='#fee2e2'; this.style.color='#b91c1c';"
+            onmouseout="this.style.background='#ffffff'; this.style.color='#64748b';"
+            title="Close Modal"
+          >
+            &times;
+          </button>
         </div>
 
-        <!-- Metric Badges Row (How Many Times Logged & Time Duration) -->
-        <div style="padding: 1rem 1.4rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; background: #ffffff; border-bottom: 1px solid #f1f5f9;">
-          <!-- 1. How Many Times Logged -->
-          <div class="stat-card-badge" style="border-left: 3px solid #10b981;">
-            <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">How Many Times Logged</div>
-            <div style="font-size: 1.15rem; font-weight: 800; color: #047857; margin-top: 2px;">
-              🔥 {{ u.total_logins }} {% if u.total_logins == 1 %}Time{% else %}Times{% endif %}
+        <!-- 4 Modern Metric Highlight Badges inside Modal -->
+        <div style="padding: 1.15rem 1.6rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.85rem; background: #fbfcfd; border-bottom: 1px solid #e2e8f0;">
+          <!-- 1. Total Logins -->
+          <div class="modal-badge-card" style="border-left: 4px solid #10b981;">
+            <div style="font-size: 0.725rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">How Many Times Logged</div>
+            <div style="font-size: 1.35rem; font-weight: 800; color: #047857; margin-top: 3px; display: flex; align-items: center; gap: 0.35rem;">
+              <span>🔥</span> {{ u.total_logins }} {% if u.total_logins == 1 %}Time{% else %}Times{% endif %}
             </div>
-            <div style="font-size: 0.7rem; color: #64748b;">{{ u.success_count }} success, {{ u.failed_count }} failed</div>
+            <div style="font-size: 0.725rem; color: #059669; font-weight: 600; margin-top: 2px;">
+              {{ u.success_count }} success &bull; {{ u.failed_count }} failed
+            </div>
           </div>
 
-          <!-- 2. Time Duration -->
-          <div class="stat-card-badge" style="border-left: 3px solid #3b82f6;">
-            <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Time Duration</div>
-            <div style="font-size: 1.05rem; font-weight: 800; color: #1e40af; margin-top: 2px;">
-              ⏱️ {{ u.duration_label }}
+          <!-- 2. Active Session Duration -->
+          <div class="modal-badge-card" style="border-left: 4px solid #3b82f6;">
+            <div style="font-size: 0.725rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">Time Duration</div>
+            <div style="font-size: 1.15rem; font-weight: 800; color: #1e40af; margin-top: 3px; display: flex; align-items: center; gap: 0.35rem;">
+              <span>⏱️</span> {{ u.duration_label }}
             </div>
-            <div style="font-size: 0.7rem; color: #64748b;">Span between first &amp; last login</div>
+            <div style="font-size: 0.725rem; color: #3b82f6; font-weight: 600; margin-top: 2px;">
+              Active login span
+            </div>
           </div>
 
           <!-- 3. First Sign-In -->
-          <div class="stat-card-badge" style="border-left: 3px solid #8b5cf6;">
-            <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">First Sign-In</div>
-            <div style="font-size: 0.85rem; font-weight: 700; color: #5b21b6; margin-top: 3px;">
+          <div class="modal-badge-card" style="border-left: 4px solid #8b5cf6;">
+            <div style="font-size: 0.725rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">First Sign-In</div>
+            <div style="font-size: 0.9rem; font-weight: 800; color: #5b21b6; margin-top: 3px;">
               {{ u.first_login.strftime('%Y-%m-%d') }}
             </div>
-            <div style="font-size: 0.7rem; color: #64748b;">{{ u.first_login.strftime('%I:%M:%S %p') }}</div>
+            <div style="font-size: 0.725rem; color: #7c3aed; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">
+              {{ u.first_login.strftime('%I:%M:%S %p') }}
+            </div>
           </div>
 
           <!-- 4. Most Recent Sign-In -->
-          <div class="stat-card-badge" style="border-left: 3px solid #06b6d4;">
-            <div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">Most Recent Sign-In</div>
-            <div style="font-size: 0.85rem; font-weight: 700; color: #0e7490; margin-top: 3px;">
+          <div class="modal-badge-card" style="border-left: 4px solid #06b6d4;">
+            <div style="font-size: 0.725rem; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;">Most Recent Sign-In</div>
+            <div style="font-size: 0.9rem; font-weight: 800; color: #0e7490; margin-top: 3px;">
               {{ u.last_login.strftime('%Y-%m-%d') }}
             </div>
-            <div style="font-size: 0.7rem; color: #64748b;">{{ u.last_login.strftime('%I:%M:%S %p') }}</div>
+            <div style="font-size: 0.725rem; color: #0891b2; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">
+              {{ u.last_login.strftime('%I:%M:%S %p') }}
+            </div>
           </div>
         </div>
 
-        <!-- Body / Detailed Sessions Table -->
-        <div style="padding: 1rem 1.4rem; overflow-y: auto; flex: 1;">
-          <h5 style="margin: 0 0 0.5rem 0; font-size: 0.85rem; color: #475569;">Detailed Login History &amp; Events:</h5>
-          <table class="data-table" style="width: 100%; font-size: 0.825rem;">
+        <!-- Detailed Sessions Table -->
+        <div style="padding: 1.25rem 1.6rem; overflow-y: auto; flex: 1;">
+          <h5 style="margin: 0 0 0.65rem 0; font-size: 0.875rem; font-weight: 800; color: #334155;">
+            Detailed Login History &amp; Authentication Trail:
+          </h5>
+          <table class="audit-data-table" style="width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
             <thead>
               <tr>
-                <th style="white-space: nowrap;">Timestamp</th>
-                <th>Status / Action</th>
+                <th style="white-space: nowrap; width: 170px;">Timestamp</th>
+                <th style="width: 140px;">Status / Action</th>
                 <th>Event Details</th>
-                <th style="text-align: right; white-space: nowrap;">Delete</th>
+                <th style="text-align: right; white-space: nowrap; width: 90px;">Delete</th>
               </tr>
             </thead>
             <tbody>
               {% for session in u.sessions %}
                 <tr>
-                  <td style="white-space: nowrap; font-weight: 600; color: #1e293b;">
+                  <td style="white-space: nowrap; font-weight: 700; color: #1e293b; font-size: 0.8rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">
                     {{ session.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}
                   </td>
                   <td style="white-space: nowrap;">
                     {% if 'LOGIN_SUCCESS' in session.action %}
-                      <span class="category-pill" style="background: #ecfdf5; color: #047857; font-weight: 700; border: 1px solid #a7f3d0; font-size: 0.725rem;">
+                      <span class="category-pill" style="background: #ecfdf5; color: #047857; font-weight: 800; border: 1px solid #a7f3d0; font-size: 0.725rem;">
                         ✓ Success
                       </span>
                     {% else %}
-                      <span class="category-pill" style="background: #fef2f2; color: #b91c1c; font-weight: 700; border: 1px solid #fecaca; font-size: 0.725rem;">
+                      <span class="category-pill" style="background: #fef2f2; color: #b91c1c; font-weight: 800; border: 1px solid #fecaca; font-size: 0.725rem;">
                         ⚠ {{ session.action }}
                       </span>
                     {% endif %}
                   </td>
-                  <td style="color: #334155; font-size: 0.825rem;">
+                  <td style="color: #334155; font-size: 0.825rem; line-height: 1.45;">
                     {{ session.details or '-' }}
                   </td>
                   <td style="text-align: right; white-space: nowrap;">
                     <form action="{{ url_for('admin.delete_audit_log', log_id=session.id) }}" method="POST" style="margin: 0; display: inline;" onsubmit="return confirm('Delete this specific login record (#{{ session.id }})?');">
                       <button 
                         type="submit" 
-                        class="btn-action" 
-                        style="color: var(--danger); background: #fef2f2; border: 1px solid #fecaca; font-size: 0.725rem; padding: 0.2rem 0.5rem; border-radius: 4px;"
+                        class="delete-chip-btn"
+                        style="padding: 0.2rem 0.5rem; font-size: 0.725rem;"
                         title="Delete this log record"
                       >
                         🗑️ Delete
@@ -508,15 +844,15 @@
           </table>
         </div>
 
-        <!-- Footer -->
-        <div style="padding: 0.85rem 1.4rem; border-top: 1px solid #e2e8f0; background: #f8fafc; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
-          <form action="{{ url_for('admin.delete_user_audit_logs', user_id=uid) }}" method="POST" style="margin: 0;" onsubmit="return confirm('Delete all login logs for {{ u.username }}?');">
-            <button type="submit" class="btn-action" style="color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; font-size: 0.75rem; padding: 0.35rem 0.7rem; border-radius: 6px;">
+        <!-- Modal Footer -->
+        <div style="padding: 1rem 1.6rem; border-top: 1px solid #e2e8f0; background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); display: flex; justify-content: space-between; align-items: center;">
+          <form action="{{ url_for('admin.delete_user_audit_logs', user_id=uid) }}" method="POST" style="margin: 0;" onsubmit="return confirm('Delete all login records for user {{ u.username }}? This cannot be undone.');">
+            <button type="submit" class="delete-chip-btn" style="padding: 0.4rem 0.85rem; font-size: 0.8rem; font-weight: 700;">
               🗑️ Delete All Logs for {{ u.username }}
             </button>
           </form>
-          <button type="button" class="btn-secondary" onclick="closeUserModal('modal-user-{{ uid }}')" style="font-size: 0.825rem; padding: 0.4rem 0.9rem;">
-            Close
+          <button type="button" class="btn-secondary" onclick="closeUserModal('modal-user-{{ uid }}')" style="font-size: 0.825rem; font-weight: 700; padding: 0.45rem 1rem; border-radius: 8px;">
+            Close Window
           </button>
         </div>
       </div>
