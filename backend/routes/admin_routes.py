@@ -336,22 +336,9 @@ def export_csv():
     )
 
 
-def format_duration(seconds: int, login_count: int) -> str:
-    """Format duration in seconds into a friendly human-readable span."""
-    if seconds < 60:
-        return 'Single session' if login_count == 1 else f'{seconds}s span'
-    elif seconds < 3600:
-        mins = seconds // 60
-        return f'{mins}m span'
-    else:
-        hours = seconds // 3600
-        mins = (seconds % 3600) // 60
-        return f'{hours}h {mins}m span' if mins > 0 else f'{hours}h span'
-
-
 @admin_bp.route('/audit-logs', methods=['GET'])
 def audit_logs():
-    """Audit Logging Viewer with automatic 30-day retention, date-wise filtering, and grouped user login view."""
+    """Audit Logging Viewer with automatic 30-day retention and date-wise filtering."""
     # 1. Automatic 1-Month Cleanup: Automatically delete audit logs older than 30 days
     one_month_ago = datetime.utcnow() - timedelta(days=30)
     purged_count = AuditLog.query.filter(AuditLog.timestamp < one_month_ago).delete(synchronize_session=False)
@@ -359,7 +346,7 @@ def audit_logs():
         db.session.commit()
 
     # 2. Filters & date-wise queries
-    filter_type = request.args.get('filter', 'today_logins')
+    filter_type = request.args.get('filter', 'all')
     date_str = request.args.get('date', '').strip()
 
     today = datetime.utcnow().date()
@@ -370,6 +357,7 @@ def audit_logs():
 
     query = AuditLog.query
 
+    selected_date = None
     if filter_type == 'today_logins':
         query = query.filter(
             AuditLog.action.in_(login_actions),
@@ -378,13 +366,13 @@ def audit_logs():
         )
     elif filter_type == 'all_logins':
         query = query.filter(AuditLog.action.in_(login_actions))
-    
-    if date_str:
+    elif filter_type == 'date' and date_str:
         try:
             target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
             d_start = datetime.combine(target_date, datetime.min.time())
             d_end = datetime.combine(target_date, datetime.max.time())
             query = query.filter(AuditLog.timestamp >= d_start, AuditLog.timestamp <= d_end)
+            selected_date = date_str
         except ValueError:
             pass
 
@@ -409,22 +397,14 @@ def audit_logs():
         'admin/audit_logs.html',
         logs=logs,
         filter_type=filter_type,
-        selected_date=date_str,
+        selected_date=selected_date or date_str,
         today_logins_count=today_logins_count,
         today_failed_count=today_failed_count,
         total_logs_count=total_logs_count,
-        today_date_str=today.strftime('%Y-%m-%d'),
+        today_date_str=today.strftime('%b %d, %Y'),
+        max_date_str=today.strftime('%Y-%m-%d'),
         purged_auto_count=purged_count
     )
-
-
-@admin_bp.route('/audit-logs/user/<int:user_id>/delete', methods=['POST'])
-def delete_user_audit_logs(user_id: int):
-    """Delete all audit logs for a specific user."""
-    deleted = AuditLog.query.filter_by(user_id=user_id).delete(synchronize_session=False)
-    db.session.commit()
-    flash(f"Deleted {deleted} audit log records for user #{user_id}.", 'info')
-    return redirect(request.referrer or url_for('admin.audit_logs'))
 
 
 @admin_bp.route('/audit-logs/<int:log_id>/delete', methods=['POST'])
@@ -465,8 +445,6 @@ def purge_audit_logs():
         msg = "No logs deleted."
 
     db.session.commit()
-    flash(msg, 'success')
-    return redirect(url_for('admin.audit_logs'))
     flash(msg, 'success')
     return redirect(url_for('admin.audit_logs'))
 

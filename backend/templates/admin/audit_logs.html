@@ -3,110 +3,6 @@
 {% block title %}System Audit Logs - IT Helpdesk RAG{% endblock %}
 
 {% block content %}
-<style>
-  /* Status Toggle Switch inside Audit Logs */
-  .status-toggle-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.2rem 0.65rem 0.2rem 0.3rem;
-    border-radius: 999px;
-    cursor: pointer;
-    font-size: 0.775rem;
-    font-weight: 700;
-    border: 1.5px solid transparent;
-    transition: all 0.2s ease;
-    background: #ffffff;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
-    box-sizing: border-box;
-    text-decoration: none;
-  }
-  .status-toggle-btn.is-on {
-    background: #ecfdf5;
-    border-color: #6ee7b7;
-    color: #065f46;
-  }
-  .status-toggle-btn.is-on:hover {
-    background: #d1fae5;
-    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
-    transform: translateY(-1px);
-  }
-  .status-toggle-btn.is-off {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-    color: #64748b;
-  }
-  .status-toggle-btn.is-off:hover {
-    background: #f1f5f9;
-    box-shadow: 0 2px 4px rgba(148, 163, 184, 0.2);
-    transform: translateY(-1px);
-  }
-  .switch-track {
-    width: 36px;
-    height: 20px;
-    border-radius: 999px;
-    position: relative;
-    display: inline-block;
-    flex-shrink: 0;
-    transition: background-color 0.25s ease;
-    box-sizing: border-box;
-  }
-  .is-on .switch-track {
-    background-color: #10b981;
-  }
-  .is-off .switch-track {
-    background-color: #94a3b8;
-  }
-  .switch-thumb {
-    width: 14px;
-    height: 14px;
-    background-color: #ffffff;
-    border-radius: 50%;
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.25);
-  }
-  .is-on .switch-thumb {
-    transform: translateX(16px);
-  }
-  .is-off .switch-thumb {
-    transform: translateX(0);
-  }
-  .status-text-label {
-    font-size: 0.75rem;
-    font-weight: 700;
-    white-space: nowrap;
-    line-height: 1;
-    display: inline-block;
-  }
-  .is-on .status-text-label {
-    color: #047857;
-  }
-  .is-off .status-text-label {
-    color: #475569;
-  }
-  .status-locked-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.25rem 0.65rem;
-    border-radius: 999px;
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    color: #166534;
-    font-size: 0.75rem;
-    font-weight: 700;
-  }
-  .status-locked-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #16a34a;
-  }
-</style>
-
 <div class="tickets-page-container">
   <!-- Page Header -->
   <div class="page-header-row" style="margin-bottom: 1.5rem; align-items: flex-start;">
@@ -122,7 +18,7 @@
         {% endif %}
       </div>
       <h2>Security &amp; Operational Audit Trail</h2>
-      <p class="subtitle">Complete audit record of user logins, role changes, tickets, and user account status</p>
+      <p class="subtitle">Complete audit record of user logins, role changes, tickets, and RAG knowledge operations</p>
     </div>
     
     <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
@@ -138,7 +34,7 @@
   </div>
 
   <!-- Metric Stats Row -->
-  <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+  <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
     <!-- Today's Successful Logins -->
     <a href="{{ url_for('admin.audit_logs', filter='today_logins') }}" style="text-decoration: none; color: inherit;">
       <div class="stat-card" style="background: #ffffff; border-left: 4px solid #10b981; padding: 1rem 1.25rem;">
@@ -161,7 +57,7 @@
       </div>
     </a>
 
-    <!-- Total Retained Records -->
+    <!-- Total Active Logs Stored -->
     <div class="stat-card" style="background: #ffffff; border-left: 4px solid #3b82f6; padding: 1rem 1.25rem;">
       <span class="stat-label">Retained Audit Records</span>
       <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-top: 0.25rem;">
@@ -178,7 +74,7 @@
       <a 
         href="{{ url_for('admin.audit_logs', filter='today_logins') }}" 
         class="btn-action" 
-        style="padding: 0.45rem 0.9rem; font-size: 0.825rem; font-weight: 600; border-radius: 6px; text-decoration: none; {% if filter_type == 'today_logins' and not selected_date %}background: #10b981; color: #ffffff; border-color: #10b981;{% else %}background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;{% endif %}"
+        style="padding: 0.45rem 0.9rem; font-size: 0.825rem; font-weight: 600; border-radius: 6px; text-decoration: none; {% if filter_type == 'today_logins' %}background: #10b981; color: #ffffff; border-color: #10b981;{% else %}background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;{% endif %}"
       >
         🌟 Today's Logins ({{ today_date_str }})
       </a>
@@ -186,54 +82,55 @@
       <a 
         href="{{ url_for('admin.audit_logs', filter='all_logins') }}" 
         class="btn-action" 
-        style="padding: 0.45rem 0.9rem; font-size: 0.825rem; font-weight: 600; border-radius: 6px; text-decoration: none; {% if filter_type == 'all_logins' and not selected_date %}background: #3b82f6; color: #ffffff; border-color: #3b82f6;{% else %}background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;{% endif %}"
+        style="padding: 0.45rem 0.9rem; font-size: 0.825rem; font-weight: 600; border-radius: 6px; text-decoration: none; {% if filter_type == 'all_logins' %}background: #1e3a8a; color: #ffffff; border-color: #1e3a8a;{% else %}background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe;{% endif %}"
       >
-        🔑 All Sign-In Logs
+        📅 All Login Events
       </a>
 
       <a 
         href="{{ url_for('admin.audit_logs', filter='all') }}" 
         class="btn-action" 
-        style="padding: 0.45rem 0.9rem; font-size: 0.825rem; font-weight: 600; border-radius: 6px; text-decoration: none; {% if filter_type == 'all' and not selected_date %}background: #475569; color: #ffffff; border-color: #475569;{% else %}background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;{% endif %}"
+        style="padding: 0.45rem 0.9rem; font-size: 0.825rem; font-weight: 600; border-radius: 6px; text-decoration: none; {% if filter_type == 'all' or not filter_type %}background: #334155; color: #ffffff; border-color: #334155;{% else %}background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;{% endif %}"
       >
-        📋 All System Activity
+        📋 All System Logs
       </a>
     </div>
 
     <!-- Date-Wise Filter Form -->
-    <form action="{{ url_for('admin.audit_logs') }}" method="GET" style="margin: 0; display: flex; gap: 0.5rem; align-items: center;">
-      <input type="hidden" name="filter" value="{{ filter_type }}">
-      <label style="font-size: 0.825rem; font-weight: 600; color: #334155; white-space: nowrap;">
-        📅 Date-wise:
-      </label>
+    <form action="{{ url_for('admin.audit_logs') }}" method="GET" style="display: flex; gap: 0.4rem; align-items: center; margin: 0;">
+      <input type="hidden" name="filter" value="date">
+      <label for="date-picker" style="font-size: 0.825rem; font-weight: 600; color: #475569;">📅 Pick Date:</label>
       <input 
         type="date" 
+        id="date-picker" 
         name="date" 
         value="{{ selected_date }}" 
-        class="form-input" 
+        max="{{ max_date_str }}" 
+        class="form-select" 
         style="padding: 0.35rem 0.6rem; font-size: 0.825rem; width: auto;"
-        onchange="this.form.submit()"
+        required
       >
-      {% if selected_date %}
-        <a href="{{ url_for('admin.audit_logs', filter=filter_type) }}" class="btn-action" style="padding: 0.35rem 0.6rem; font-size: 0.775rem; text-decoration: none; color: #dc2626; background: #fef2f2; border: 1px solid #fecaca;">
-          ✕ Clear Date
-        </a>
+      <button type="submit" class="btn-action" style="padding: 0.35rem 0.75rem; font-size: 0.825rem;">
+        Go
+      </button>
+      {% if filter_type == 'date' %}
+        <a href="{{ url_for('admin.audit_logs') }}" class="btn-secondary" style="padding: 0.35rem 0.6rem; font-size: 0.8rem;" title="Reset Filter">&times;</a>
       {% endif %}
     </form>
   </div>
 
-  <!-- Audit Logs Main Table -->
-  <div class="section-card">
-    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-      <h3 style="margin: 0;">
-        {% if filter_type == 'today_logins' and not selected_date %}
-          🌟 Today's Login Activity ({{ logs|length }} Records)
-        {% elif filter_type == 'all_logins' and not selected_date %}
-          🔑 User Authentication Log History ({{ logs|length }} Records)
-        {% elif selected_date %}
-          📅 Audit Logs for {{ selected_date }} ({{ logs|length }} Records)
+  <!-- Audit Logs Data Table -->
+  <div class="panel-card" style="background: #ffffff; border: 1px solid var(--card-border); border-radius: var(--radius-lg); padding: 1.25rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+      <h3 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 0;">
+        {% if filter_type == 'today_logins' %}
+          Showing Today's Login Activity ({{ logs|length }} entries)
+        {% elif filter_type == 'all_logins' %}
+          Showing All Historical Login Events ({{ logs|length }} entries)
+        {% elif filter_type == 'date' %}
+          Showing Activity for {{ selected_date }} ({{ logs|length }} entries)
         {% else %}
-          System Audit Trail (Showing last {{ logs|length }} of {{ total_logs_count }} active logs)
+          Recent Audit Events ({{ total_logs_count }} active logs)
         {% endif %}
       </h3>
 
@@ -253,8 +150,10 @@
           <tr>
             <th style="white-space: nowrap;">Timestamp / Date</th>
             <th>User</th>
-            <th style="text-align: center; white-space: nowrap;">Status (Active / Inactive)</th>
-            <th>Entity</th>
+            <th>Action</th>
+            <th>Entity Type</th>
+            <th>Entity ID</th>
+            <th>Details</th>
             <th style="text-align: right; white-space: nowrap;">Delete</th>
           </tr>
         </thead>
@@ -271,52 +170,48 @@
               <td style="font-weight: 600; white-space: nowrap;">
                 {% if log.user %}
                   <span style="color: #1e3a8a;">{{ log.user.username }}</span>
-                  <div style="font-size: 0.725rem; font-weight: normal; color: #64748b;">{{ log.user.email }}</div>
                 {% else %}
                   <span style="color: #64748b; font-style: italic;">System / Automated</span>
                 {% endif %}
               </td>
 
-              <!-- 3. Status (Active / Inactive Button) -->
-              <td style="text-align: center; white-space: nowrap;">
-                {% if log.user %}
-                  {% if log.user.id == current_user.id %}
-                    <span class="status-locked-pill" title="Your administrative account is permanently ON">
-                      <span class="status-locked-dot"></span> ON (Active)
-                    </span>
-                  {% else %}
-                    <form action="{{ url_for('admin.toggle_user_status', user_id=log.user.id) }}" method="POST" style="margin: 0; display: inline-block;">
-                      <button 
-                        type="submit" 
-                        class="status-toggle-btn {% if log.user.is_active %}is-on{% else %}is-off{% endif %}"
-                        title="Click to toggle status: {% if log.user.is_active %}Turn OFF (Deactivate {{ log.user.username }}){% else %}Turn ON (Activate {{ log.user.username }}){% endif %}"
-                        onclick="return confirm('Change status for {{ log.user.username }} to {% if log.user.is_active %}INACTIVE (Turn OFF){% else %}ACTIVE (Turn ON){% endif %}?');"
-                      >
-                        <span class="switch-track">
-                          <span class="switch-thumb"></span>
-                        </span>
-                        <span class="status-text-label">
-                          {% if log.user.is_active %}
-                            ON &bull; Active
-                          {% else %}
-                            OFF &bull; Inactive
-                          {% endif %}
-                        </span>
-                      </button>
-                    </form>
-                  {% endif %}
+              <!-- 3. Action with Color Coding -->
+              <td style="white-space: nowrap;">
+                {% if 'LOGIN_SUCCESS' in log.action %}
+                  <span class="category-pill" style="background: #ecfdf5; color: #047857; font-weight: 700; border: 1px solid #a7f3d0;">
+                    ✓ {{ log.action }}
+                  </span>
+                {% elif 'LOGIN_FAILED' in log.action or 'LOCKED' in log.action %}
+                  <span class="category-pill" style="background: #fef2f2; color: #b91c1c; font-weight: 700; border: 1px solid #fecaca;">
+                    ⚠ {{ log.action }}
+                  </span>
+                {% elif 'ROLE' in log.action or 'STATUS' in log.action %}
+                  <span class="category-pill" style="background: #ede9fe; color: #6d28d9; font-weight: 700;">
+                    👤 {{ log.action }}
+                  </span>
+                {% elif 'DOC' in log.action %}
+                  <span class="category-pill" style="background: #f0fdf4; color: #0f766e; font-weight: 700;">
+                    📄 {{ log.action }}
+                  </span>
                 {% else %}
-                  <span style="color: #94a3b8; font-size: 0.775rem;">System</span>
+                  <span class="category-pill">{{ log.action }}</span>
                 {% endif %}
               </td>
 
-              <!-- 4. Entity (Type & ID) -->
+              <!-- 4. Entity Type -->
+              <td style="white-space: nowrap; font-size: 0.85rem;">{{ log.entity_type }}</td>
+
+              <!-- 5. Entity ID -->
               <td style="white-space: nowrap; font-size: 0.85rem;">
-                <span class="category-pill" style="font-size: 0.75rem;">{{ log.entity_type }}</span>
-                {% if log.entity_id %}<code>#{{ log.entity_id }}</code>{% endif %}
+                {% if log.entity_id %}<code>#{{ log.entity_id }}</code>{% else %}-{% endif %}
               </td>
 
-              <!-- 5. Delete Option (Per Row) -->
+              <!-- 6. Details -->
+              <td style="font-size: 0.85rem; line-height: 1.45; color: #334155;">
+                {{ log.details or '-' }}
+              </td>
+
+              <!-- 7. Delete Option (Per Row) -->
               <td style="text-align: right; white-space: nowrap;">
                 <form action="{{ url_for('admin.delete_audit_log', log_id=log.id) }}" method="POST" onsubmit="return confirm('Delete this audit log entry (#{{ log.id }})?');" style="margin: 0; display: inline;">
                   <button 
@@ -332,7 +227,7 @@
             </tr>
           {% else %}
             <tr>
-              <td colspan="5" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+              <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
                 <em>No audit events found for this filter or date.</em>
               </td>
             </tr>
