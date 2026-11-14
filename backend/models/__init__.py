@@ -5,7 +5,7 @@ from backend.models.ticket import (
     TicketCategory, Ticket, TicketComment, TicketAttachment, 
     TicketStatusHistory, TicketEscalation, TicketFeedback
 )
-from backend.models.knowledge import KnowledgeDocument, KnowledgeChunk
+from backend.models.knowledge import KnowledgeDocument, KnowledgeChunk, KnowledgeDocumentVersion
 from backend.models.ai_response import AIResponse
 from backend.models.sla import SLAPolicy
 from backend.models.audit import AuditLog

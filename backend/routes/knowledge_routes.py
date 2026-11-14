@@ -1,16 +1,31 @@
+from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, send_file
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from pathlib import Path
 
 from backend.extensions import db
-from backend.models.knowledge import KnowledgeDocument, KnowledgeChunk
+from backend.models.knowledge import KnowledgeDocument, KnowledgeChunk, KnowledgeDocumentVersion
 from backend.services.rag_service import RAGService, VectorStoreManager
 from backend.models.audit import AuditLog
 
 knowledge_bp = Blueprint('knowledge', __name__, url_prefix='/knowledge')
 
 ALLOWED_EXTENSIONS = {'pdf', 'docx', 'txt', 'md'}
+
+
+def suggest_next_version(curr: str) -> str:
+    """Helper to suggest next version number e.g. v1.0 -> v1.1."""
+    if not curr:
+        return 'v1.1'
+    curr_clean = curr.lstrip('v').split()[0]
+    try:
+        parts = curr_clean.split('.')
+        major = int(parts[0])
+        minor = int(parts[1]) if len(parts) > 1 else 0
+        return f"v{major}.{minor + 1}"
+    except Exception:
+        return 'v1.1'
 
 
 def allowed_file(filename):
@@ -62,10 +77,48 @@ def document_detail(doc_id: int):
     )
 
 
+def _apply_document_update(doc, file_path, filename, file_type, heading, category, change_summary, version_number=None):
+    """Applies new file changes to an existing document, archives old revision, and re-indexes FAISS."""
+    if not version_number:
+        version_number = suggest_next_version(doc.version)
+
+    doc.filename = filename
+    doc.file_path = str(file_path)
+    doc.file_type = file_type
+    doc.file_size = file_path.stat().st_size
+    doc.title = heading
+    doc.category = category
+    doc.version = version_number
+    doc.change_summary = change_summary
+    doc.updated_at = datetime.utcnow()
+
+    # Record new version in revision history
+    ver = KnowledgeDocumentVersion(
+        document_id=doc.id,
+        version_number=version_number,
+        filename=filename,
+        file_path=str(file_path),
+        file_size=doc.file_size,
+        change_summary=change_summary,
+        uploaded_by_id=current_user.id
+    )
+    db.session.add(ver)
+    db.session.commit()
+
+    # Re-extract chunks and re-index vector store
+    success, error = RAGService.ingest_document(doc.id)
+    ver.chunk_count = doc.chunk_count
+    db.session.commit()
+
+    AuditLog.log("DOC_VERSION_UPDATED", "KnowledgeDocument", doc.id, current_user.id, f"Updated '{doc.display_title}' to {version_number} ({change_summary})")
+    flash(f"Document '{doc.display_title}' updated to {version_number} with new changes! Chunks re-indexed ({doc.chunk_count} chunks).", 'success')
+    return redirect(url_for('knowledge.index'))
+
+
 @knowledge_bp.route('/upload', methods=['POST'])
 @login_required
 def upload():
-    """Upload a new internal IT SOP / troubleshooting document with Heading and Category."""
+    """Upload a new internal IT SOP / troubleshooting document or update if same document exists."""
     if current_user.is_employee:
         flash("Only IT Support Managers and Administrators can upload knowledge documents.", 'danger')
         return redirect(url_for('knowledge.index'))
@@ -81,6 +134,7 @@ def upload():
 
     heading = request.form.get('title', '').strip()
     category = request.form.get('category', '').strip() or 'General IT SOP'
+    change_summary = request.form.get('change_summary', '').strip() or 'Initial document upload'
 
     filename = secure_filename(file.filename)
     # If heading wasn't provided, format nicely from filename
@@ -95,6 +149,26 @@ def upload():
     file.save(str(save_path))
     file_type = filename.rsplit('.', 1)[1].upper()
 
+    # Check if this document already exists -> Update the same file with new changes!
+    existing_doc = KnowledgeDocument.query.filter(
+        db.or_(
+            KnowledgeDocument.filename == filename,
+            KnowledgeDocument.title == heading
+        )
+    ).first()
+
+    if existing_doc:
+        return _apply_document_update(
+            existing_doc,
+            file_path=save_path,
+            filename=filename,
+            file_type=file_type,
+            heading=heading or existing_doc.title,
+            category=category or existing_doc.category,
+            change_summary=change_summary or 'Updated document with new changes'
+        )
+
+    # Brand new document
     doc = KnowledgeDocument(
         filename=filename,
         title=heading,
@@ -103,20 +177,140 @@ def upload():
         file_type=file_type,
         file_size=save_path.stat().st_size,
         status=KnowledgeDocument.STATUS_UPLOADED,
+        version='v1.0',
+        change_summary=change_summary,
         uploaded_by_id=current_user.id
     )
     db.session.add(doc)
     db.session.commit()
 
-    AuditLog.log("DOC_UPLOADED", "KnowledgeDocument", doc.id, current_user.id, f"Uploaded '{heading}' ({filename})")
+    # Record initial v1.0 version
+    init_ver = KnowledgeDocumentVersion(
+        document_id=doc.id,
+        version_number='v1.0',
+        filename=filename,
+        file_path=str(save_path),
+        file_size=doc.file_size,
+        change_summary=change_summary,
+        uploaded_by_id=current_user.id
+    )
+    db.session.add(init_ver)
+    db.session.commit()
+
+    AuditLog.log("DOC_UPLOADED", "KnowledgeDocument", doc.id, current_user.id, f"Uploaded '{heading}' v1.0 ({filename})")
 
     # Automatically trigger ingestion pipeline
     success, error = RAGService.ingest_document(doc.id)
+    init_ver.chunk_count = doc.chunk_count
+    db.session.commit()
+
     if success:
-        flash(f"Document '{heading}' uploaded and indexed successfully into vector store ({doc.chunk_count} chunks)!", 'success')
+        flash(f"Document '{heading}' (v1.0) uploaded and indexed successfully into vector store ({doc.chunk_count} chunks)!", 'success')
     else:
         flash(f"Document uploaded, but ingestion reported: {error}", 'warning')
 
+    return redirect(url_for('knowledge.index'))
+
+
+@knowledge_bp.route('/<int:doc_id>/update_file', methods=['POST'])
+@login_required
+def update_file(doc_id: int):
+    """Upload revised file for an existing document with new changes and revision tracking."""
+    if current_user.is_employee:
+        flash("Only IT Support Managers and Administrators can update knowledge documents.", 'danger')
+        return redirect(url_for('knowledge.index'))
+
+    doc = KnowledgeDocument.query.get_or_404(doc_id)
+    file = request.files.get('document')
+    if not file or file.filename == '':
+        flash("Please select a revised file to upload.", 'danger')
+        return redirect(url_for('knowledge.index'))
+
+    if not allowed_file(file.filename):
+        flash("Allowed file types are: PDF, DOCX, TXT, MD.", 'danger')
+        return redirect(url_for('knowledge.index'))
+
+    change_summary = request.form.get('change_summary', '').strip() or 'Updated file with new changes'
+    custom_ver = request.form.get('version', '').strip()
+    new_version = custom_ver if custom_ver else suggest_next_version(doc.version)
+
+    filename = secure_filename(file.filename)
+    docs_dir = current_app.config['DOCUMENTS_DIR']
+    docs_dir.mkdir(parents=True, exist_ok=True)
+    save_path = docs_dir / filename
+    file.save(str(save_path))
+    file_type = filename.rsplit('.', 1)[1].upper()
+
+    return _apply_document_update(
+        doc,
+        file_path=save_path,
+        filename=filename,
+        file_type=file_type,
+        heading=doc.title,
+        category=doc.category,
+        change_summary=change_summary,
+        version_number=new_version
+    )
+
+
+@knowledge_bp.route('/<int:doc_id>/versions', methods=['GET'])
+@login_required
+def get_versions(doc_id: int):
+    """Return revision history of a document."""
+    doc = KnowledgeDocument.query.get_or_404(doc_id)
+    versions = KnowledgeDocumentVersion.query.filter_by(document_id=doc.id).order_by(KnowledgeDocumentVersion.id.desc()).all()
+    return jsonify({
+        'document_id': doc.id,
+        'title': doc.display_title,
+        'current_version': doc.current_version,
+        'versions': [v.to_dict() for v in versions]
+    })
+
+
+@knowledge_bp.route('/<int:doc_id>/rollback/<int:version_id>', methods=['POST'])
+@login_required
+def rollback_version(doc_id: int, version_id: int):
+    """Rollback document to a previous revision."""
+    if current_user.is_employee:
+        flash("Unauthorized.", 'danger')
+        return redirect(url_for('knowledge.index'))
+
+    doc = KnowledgeDocument.query.get_or_404(doc_id)
+    target_ver = KnowledgeDocumentVersion.query.get_or_404(version_id)
+    if target_ver.document_id != doc.id:
+        flash("Invalid version for this document.", 'danger')
+        return redirect(url_for('knowledge.index'))
+
+    new_version_num = f"{target_ver.version_number}-r"
+    change_summary = f"Rolled back to {target_ver.version_number} ({target_ver.filename})"
+
+    doc.filename = target_ver.filename
+    doc.file_path = target_ver.file_path
+    doc.file_size = target_ver.file_size
+    doc.version = new_version_num
+    doc.change_summary = change_summary
+    doc.updated_at = datetime.utcnow()
+
+    # Record rollback as a new revision
+    rollback_rec = KnowledgeDocumentVersion(
+        document_id=doc.id,
+        version_number=new_version_num,
+        filename=target_ver.filename,
+        file_path=target_ver.file_path,
+        file_size=target_ver.file_size,
+        change_summary=change_summary,
+        uploaded_by_id=current_user.id
+    )
+    db.session.add(rollback_rec)
+    db.session.commit()
+
+    # Re-ingest restored file
+    RAGService.ingest_document(doc.id)
+    rollback_rec.chunk_count = doc.chunk_count
+    db.session.commit()
+
+    AuditLog.log("DOC_ROLLBACK", "KnowledgeDocument", doc.id, current_user.id, f"Rolled back '{doc.display_title}' to {target_ver.version_number}")
+    flash(f"Document '{doc.display_title}' rolled back to {target_ver.version_number} successfully! AI index restored.", 'info')
     return redirect(url_for('knowledge.index'))
 
 
