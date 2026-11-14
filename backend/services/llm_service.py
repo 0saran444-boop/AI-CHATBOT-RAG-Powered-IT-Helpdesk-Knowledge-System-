@@ -9,9 +9,11 @@ import requests
 logger = logging.getLogger(__name__)
 
 # Advanced Gemini Model Priority Chain (Failover resilience)
-PRIMARY_MODEL = os.environ.get('GEMINI_PRIMARY_MODEL', 'gemini-3.5-flash-lite')
+PRIMARY_MODEL = os.environ.get('GEMINI_PRIMARY_MODEL', 'gemini-3.8-flash')
 FALLBACK_MODELS = [
     PRIMARY_MODEL,
+    'gemini-3.8-flash',
+    'gemini-3.5-flash-lite',
     'gemini-3.5-flash',
     'gemini-flash-latest'
 ]
@@ -154,7 +156,8 @@ class LLMService:
                         }
                     }
 
-                    resp = requests.post(url, json=payload, timeout=12)
+                    timeout = 6 if '3.8' in model_name else 12
+                    resp = requests.post(url, json=payload, timeout=timeout)
                     if resp.status_code == 200:
                         data = resp.json()
                         candidates = data.get("candidates", [])
