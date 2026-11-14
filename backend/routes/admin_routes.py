@@ -358,9 +358,8 @@ def audit_logs():
     if purged_count > 0:
         db.session.commit()
 
-    # 2. Filters & view parameters
+    # 2. Filters & date-wise queries
     filter_type = request.args.get('filter', 'today_logins')
-    view_mode = request.args.get('view', 'users' if filter_type in ['today_logins', 'all_logins', 'users'] else 'stream')
     date_str = request.args.get('date', '').strip()
 
     today = datetime.utcnow().date()
@@ -391,51 +390,40 @@ def audit_logs():
 
     logs = query.order_by(AuditLog.timestamp.desc()).limit(300).all()
 
-    # 3. Group by user to prevent repeated rows (NO duplicate users!)
-    user_map = {}
-    for log in logs:
-        uid = log.user_id or 0
-        if uid not in user_map:
-            user_map[uid] = []
-        user_map[uid].append(log)
+    # 3. Build comprehensive User Stats for "View Option" (how many times logged & time duration, no repeat users)
+    user_groups = {}
+    all_login_logs = AuditLog.query.filter(AuditLog.action.in_(login_actions)).order_by(AuditLog.timestamp.desc()).all()
+    for l in all_login_logs:
+        uid = l.user_id or 0
+        if uid not in user_groups:
+            user_groups[uid] = []
+        user_groups[uid].append(l)
 
-    user_summaries = []
-    for uid, ulogs in user_map.items():
+    user_stats = {}
+    for uid, ulogs in user_groups.items():
         user = db.session.get(User, uid) if uid else None
         username = user.username if user else ('System / AI' if uid == 0 else f'User #{uid}')
         email = user.email if user else '-'
         role_name = user.role.name if (user and user.role) else 'None'
-        is_active = user.is_active if user else False
-        
-        success_count = sum(1 for x in ulogs if x.action == 'LOGIN_SUCCESS')
-        failed_count = sum(1 for x in ulogs if x.action in ['LOGIN_FAILED', 'LOGIN_BLOCKED_LOCKED', 'ACCOUNT_LOCKED'])
-        total_count = len(ulogs)
-        
         sorted_times = sorted([x.timestamp for x in ulogs])
-        first_time = sorted_times[0]
-        last_time = sorted_times[-1]
-        diff_secs = int((last_time - first_time).total_seconds())
-        duration_label = format_duration(diff_secs, total_count)
-        
-        user_summaries.append({
+        diff_secs = int((sorted_times[-1] - sorted_times[0]).total_seconds())
+
+        user_stats[uid] = {
             'user_id': uid,
-            'user': user,
             'username': username,
             'email': email,
             'role': role_name,
-            'is_active': is_active,
-            'total_count': total_count,
-            'success_count': success_count,
-            'failed_count': failed_count,
-            'first_time': first_time,
-            'last_time': last_time,
-            'duration_label': duration_label,
+            'total_logins': len(ulogs),
+            'success_count': sum(1 for x in ulogs if x.action == 'LOGIN_SUCCESS'),
+            'failed_count': sum(1 for x in ulogs if x.action in ['LOGIN_FAILED', 'LOGIN_BLOCKED_LOCKED', 'ACCOUNT_LOCKED']),
+            'first_login': sorted_times[0],
+            'last_login': sorted_times[-1],
+            'duration_label': format_duration(diff_secs, len(ulogs)),
             'diff_seconds': diff_secs,
             'sessions': ulogs
-        })
+        }
 
-    # Sort grouped users by latest activity descending
-    user_summaries.sort(key=lambda s: s['last_time'], reverse=True)
+    unique_users_list = sorted(user_stats.values(), key=lambda s: s['last_login'], reverse=True)
 
     # 4. Metrics for stats cards
     today_logins_count = AuditLog.query.filter(
@@ -452,25 +440,15 @@ def audit_logs():
 
     total_logs_count = AuditLog.query.count()
 
-    unique_active_users_today = len(set(
-        l.user_id for l in AuditLog.query.filter(
-            AuditLog.action == 'LOGIN_SUCCESS',
-            AuditLog.timestamp >= today_start,
-            AuditLog.timestamp <= today_end,
-            AuditLog.user_id.isnot(None)
-        ).all()
-    ))
-
     return render_template(
         'admin/audit_logs.html',
         logs=logs,
-        user_summaries=user_summaries,
-        view_mode=view_mode,
+        user_stats=user_stats,
+        unique_users_list=unique_users_list,
         filter_type=filter_type,
         selected_date=date_str,
         today_logins_count=today_logins_count,
         today_failed_count=today_failed_count,
-        unique_active_users_today=unique_active_users_today,
         total_logs_count=total_logs_count,
         today_date_str=today.strftime('%Y-%m-%d'),
         purged_auto_count=purged_count
