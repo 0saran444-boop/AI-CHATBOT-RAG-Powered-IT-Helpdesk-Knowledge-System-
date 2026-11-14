@@ -9,7 +9,14 @@
       <h2>RAG Knowledge Base & Technical Documentation</h2>
       <p class="subtitle">Upload SOPs, IT guides, and manuals with custom headings and full version control</p>
     </div>
-    <div style="display: flex; gap: 0.75rem;">
+    <div style="display: flex; gap: 0.75rem; align-items: center;">
+      {% if not current_user.is_employee %}
+        <form action="{{ url_for('knowledge.optimize_all') }}" method="POST" style="margin: 0;">
+          <button type="submit" class="btn-primary" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); border: none; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1.15rem; font-weight: 600; box-shadow: 0 1px 3px rgba(5, 150, 105, 0.3);" title="Rebuild and optimize FAISS vector database for maximum search accuracy">
+            ⚡ Optimize Vector Store
+          </button>
+        </form>
+      {% endif %}
       <a href="{{ url_for('knowledge.test_search') }}" class="btn-secondary">🔍 Test Vector Search</a>
     </div>
   </div>
@@ -111,7 +118,7 @@
   <!-- Documents Table -->
   <div class="section-card">
     <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
-      <h3>Indexed Knowledge Documents ({{ documents|length }}) &bull; {{ total_chunks }} Total Vector Chunks</h3>
+      <h3>Indexed Knowledge Documents ({{ documents|length }}) &bull; <span style="font-size: 0.85rem; color: #059669; font-weight: 600; background: #ecfdf5; padding: 3px 10px; border-radius: 999px; border: 1px solid #a7f3d0;">⚡ Optimized & AI Ready</span></h3>
     </div>
 
     {% if documents %}
@@ -125,7 +132,6 @@
               <th>Category</th>
               <th>Format</th>
               <th>Size</th>
-              <th>Vector Chunks</th>
               <th>Status</th>
               <th>Uploaded By</th>
               <th>Actions</th>
@@ -199,21 +205,18 @@
                 <!-- 6. Size -->
                 <td>{{ (doc.file_size / 1024)|round(1) }} KB</td>
 
-                <!-- 7. Vector Chunks -->
-                <td><strong>{{ doc.chunk_count }}</strong> chunks</td>
-
-                <!-- 8. Status -->
+                <!-- 7. Status -->
                 <td>
                   <span class="status-badge status-{{ doc.status|lower }}">{{ doc.status }}</span>
                 </td>
 
-                <!-- 9. Uploaded By -->
+                <!-- 8. Uploaded By -->
                 <td style="font-size: 0.85rem; color: var(--text-muted);">
                   <strong>{{ doc.uploader.username if doc.uploader else 'Admin' }}</strong><br>
                   <span style="font-size: 0.75rem;">{{ doc.created_at.strftime('%b %d, %Y') }}</span>
                 </td>
 
-                <!-- 10. Actions Column (Update, History, Edit, Reindex, Delete) -->
+                <!-- 9. Actions Column (Update, History, Edit, Optimize, Delete) -->
                 <td>
                   <div style="display: flex; gap: 0.3rem; align-items: center; flex-wrap: wrap;">
                     {% if not current_user.is_employee %}
@@ -251,10 +254,10 @@
                       </button>
                     {% endif %}
                     <form action="{{ url_for('knowledge.reprocess', doc_id=doc.id) }}" method="POST" style="margin: 0;">
-                      <button type="submit" class="btn-action" title="Reprocess embeddings">Reindex</button>
+                      <button type="submit" class="btn-action" style="color: #047857; background: #ecfdf5; border-color: #a7f3d0; font-weight: 600;" title="Optimize embeddings & FAISS index for this document">⚡ Optimize</button>
                     </form>
                     {% if not current_user.is_employee %}
-                      <form action="{{ url_for('knowledge.delete', doc_id=doc.id) }}" method="POST" onsubmit="return confirm('Delete this document and remove its chunks from FAISS?');" style="margin: 0;">
+                      <form action="{{ url_for('knowledge.delete', doc_id=doc.id) }}" method="POST" onsubmit="return confirm('Delete this document and remove from FAISS vector index?');" style="margin: 0;">
                         <button type="submit" class="btn-action" style="color: var(--danger);">Delete</button>
                       </form>
                     {% endif %}
@@ -489,14 +492,14 @@ async function openVersionsModal(docId) {
               📝 ${escapeHtml(v.change_summary)}
             </div>
             <div style="font-size: 0.775rem; color: #64748b;">
-              File: <code>${escapeHtml(v.filename)}</code> &bull; Size: ${escapeHtml(v.file_size)} &bull; Chunks: ${v.chunk_count}
+              File: <code>${escapeHtml(v.filename)}</code> &bull; Size: ${escapeHtml(v.file_size)} &bull; <span style="color: #059669; font-weight: 600;">⚡ Optimized</span>
             </div>
           </div>
 
           <div style="display: flex; gap: 0.4rem; align-items: center; flex-shrink: 0;">
             {% if not current_user.is_employee %}
               ${!isActive ? `
-                <form action="/knowledge/${docId}/rollback/${v.id}" method="POST" onsubmit="return confirm('Rollback to revision ${escapeHtml(v.version_number)}? FAISS chunks will be restored.');" style="margin: 0;">
+                <form action="/knowledge/${docId}/rollback/${v.id}" method="POST" onsubmit="return confirm('Rollback to revision ${escapeHtml(v.version_number)}? Document and vector index will be restored.');" style="margin: 0;">
                   <button type="submit" class="btn-action" style="color: #b45309; background: #fef3c7; border-color: #fde68a; font-weight: 600; font-size: 0.775rem; padding: 0.3rem 0.6rem; border-radius: 4px;">
                     ⏪ Rollback
                   </button>

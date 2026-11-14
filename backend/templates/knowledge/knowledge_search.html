@@ -31,7 +31,7 @@
   <div class="section-card">
     <div class="section-header">
       <h3 id="resultsHeader">Search Results {% if query %}for "{{ query }}"{% endif %}</h3>
-      <span class="panel-tag" id="resultsCountTag">{{ results|length }} Chunks Retrieved</span>
+      <span class="panel-tag" id="resultsCountTag">{{ results|length }} Matches Retrieved</span>
     </div>
 
     <div id="resultsContainer">
@@ -51,7 +51,7 @@
                 <span class="source-relevance" style="font-size: 0.85rem;">Cosine Similarity: {{ (r.score * 100)|round(1) }}%</span>
               </div>
               <div class="source-meta" style="margin-bottom: 0.75rem;">
-                Location: {{ r.section_title }} &bull; Page: {{ r.page_number }} &bull; Chunk ID: {{ r.chunk_id }}
+                Location: {{ r.section_title }} &bull; Page: {{ r.page_number }}
               </div>
               <div style="background: #f8fafc; padding: 0.75rem 1rem; border-radius: var(--radius-sm); border-left: 3px solid var(--primary); font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap;">{{ r.content }}</div>
             </div>
@@ -104,7 +104,7 @@ if (vectorForm) {
       btn.textContent = 'Search Vectors';
 
       header.textContent = `Search Results for "${q}"`;
-      countTag.textContent = `${data.total} Chunks Retrieved`;
+      countTag.textContent = `${data.total} Matches Retrieved`;
 
       if (data.results && data.results.length > 0) {
         let html = '<div style="display: flex; flex-direction: column; gap: 1rem;">';
@@ -121,7 +121,7 @@ if (vectorForm) {
                 <span class="source-relevance" style="font-size: 0.85rem;">Cosine Similarity: ${scorePct}%</span>
               </div>
               <div class="source-meta" style="margin-bottom: 0.75rem;">
-                Location: ${escapeHtml(r.section_title || 'General')} &bull; Page: ${r.page_number || 1} &bull; Chunk ID: ${r.chunk_id || '-'}
+                Location: ${escapeHtml(r.section_title || 'General')} &bull; Page: ${r.page_number || 1}
               </div>
               <div style="background: #f8fafc; padding: 0.75rem 1rem; border-radius: var(--radius-sm); border-left: 3px solid var(--primary); font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(r.content)}</div>
             </div>
