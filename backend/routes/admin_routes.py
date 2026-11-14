@@ -379,11 +379,24 @@ def audit_logs():
     logs = query.order_by(AuditLog.timestamp.desc()).limit(300).all()
 
     # Metrics for stats cards
-    today_logins_count = AuditLog.query.filter(
+    today_successful_logins = AuditLog.query.filter(
         AuditLog.action == 'LOGIN_SUCCESS',
         AuditLog.timestamp >= today_start,
         AuditLog.timestamp <= today_end
-    ).count()
+    ).all()
+
+    today_logins_count = len(today_successful_logins)
+
+    # Compute how many times each user logged in today (login frequency breakdown)
+    user_today_counts = {}
+    for log in today_successful_logins:
+        uname = log.user.username if log.user else 'System'
+        user_today_counts[uname] = user_today_counts.get(uname, 0) + 1
+
+    today_user_breakdown = [
+        {'username': uname, 'count': count}
+        for uname, count in sorted(user_today_counts.items(), key=lambda x: x[1], reverse=True)
+    ]
 
     today_failed_count = AuditLog.query.filter(
         AuditLog.action.in_(['LOGIN_FAILED', 'LOGIN_BLOCKED_LOCKED', 'ACCOUNT_LOCKED']),
@@ -401,9 +414,12 @@ def audit_logs():
         today_logins_count=today_logins_count,
         today_failed_count=today_failed_count,
         total_logs_count=total_logs_count,
+        today_date=today,
         today_date_str=today.strftime('%b %d, %Y'),
         max_date_str=today.strftime('%Y-%m-%d'),
-        purged_auto_count=purged_count
+        purged_auto_count=purged_count,
+        today_user_breakdown=today_user_breakdown,
+        user_today_counts=user_today_counts
     )
 
 

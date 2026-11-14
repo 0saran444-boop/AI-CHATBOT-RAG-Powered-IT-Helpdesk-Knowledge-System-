@@ -43,6 +43,17 @@
           <span class="stat-number stat-success">{{ today_logins_count }}</span>
           <span style="font-size: 0.8rem; color: #64748b;">successful sign-ins</span>
         </div>
+        <!-- Nearby Today's Logins: How many times each user logged in -->
+        {% if today_user_breakdown %}
+          <div style="margin-top: 0.55rem; padding-top: 0.4rem; border-top: 1px dashed #e2e8f0; display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center;">
+            <span style="font-size: 0.725rem; font-weight: 700; color: #475569;">Logged in:</span>
+            {% for u in today_user_breakdown %}
+              <span style="background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857; font-size: 0.725rem; font-weight: 700; padding: 1px 6px; border-radius: 4px;" title="{{ u.username }} logged in {{ u.count }} time{% if u.count > 1 %}s{% endif %} today">
+                {{ u.username }}: {{ u.count }} time{% if u.count > 1 %}s{% endif %}
+              </span>
+            {% endfor %}
+          </div>
+        {% endif %}
       </div>
     </a>
 
@@ -125,6 +136,11 @@
       <h3 style="font-size: 1.05rem; font-weight: 700; color: #0f172a; margin: 0;">
         {% if filter_type == 'today_logins' %}
           Showing Today's Login Activity ({{ logs|length }} entries)
+          {% if today_user_breakdown %}
+            <span style="font-size: 0.8rem; font-weight: normal; color: #64748b; margin-left: 0.5rem;">
+              [Logins: {% for u in today_user_breakdown %}{{ u.username }} &times; {{ u.count }}{% if not loop.last %}, {% endif %}{% endfor %}]
+            </span>
+          {% endif %}
         {% elif filter_type == 'all_logins' %}
           Showing All Historical Login Events ({{ logs|length }} entries)
         {% elif filter_type == 'date' %}
@@ -170,6 +186,11 @@
               <td style="font-weight: 600; white-space: nowrap;">
                 {% if log.user %}
                   <span style="color: #1e3a8a;">{{ log.user.username }}</span>
+                  {% if log.action == 'LOGIN_SUCCESS' and log.timestamp.date() == today_date and user_today_counts.get(log.user.username) %}
+                    <span class="category-pill" style="background: #ecfdf5; color: #047857; font-size: 0.7rem; font-weight: 700; padding: 1px 5px; margin-left: 0.35rem; border: 1px solid #a7f3d0;" title="{{ log.user.username }} logged in {{ user_today_counts.get(log.user.username) }} times today">
+                      {{ user_today_counts.get(log.user.username) }} time{% if user_today_counts.get(log.user.username) > 1 %}s{% endif %} today
+                    </span>
+                  {% endif %}
                 {% else %}
                   <span style="color: #64748b; font-style: italic;">System / Automated</span>
                 {% endif %}
