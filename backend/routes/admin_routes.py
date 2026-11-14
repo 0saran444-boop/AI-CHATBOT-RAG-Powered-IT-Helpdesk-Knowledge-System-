@@ -390,42 +390,7 @@ def audit_logs():
 
     logs = query.order_by(AuditLog.timestamp.desc()).limit(300).all()
 
-    # 3. Build comprehensive User Stats for "View Option" (how many times logged & time duration, no repeat users)
-    user_groups = {}
-    all_login_logs = AuditLog.query.filter(AuditLog.action.in_(login_actions)).order_by(AuditLog.timestamp.desc()).all()
-    for l in all_login_logs:
-        uid = l.user_id or 0
-        if uid not in user_groups:
-            user_groups[uid] = []
-        user_groups[uid].append(l)
-
-    user_stats = {}
-    for uid, ulogs in user_groups.items():
-        user = db.session.get(User, uid) if uid else None
-        username = user.username if user else ('System / AI' if uid == 0 else f'User #{uid}')
-        email = user.email if user else '-'
-        role_name = user.role.name if (user and user.role) else 'None'
-        sorted_times = sorted([x.timestamp for x in ulogs])
-        diff_secs = int((sorted_times[-1] - sorted_times[0]).total_seconds())
-
-        user_stats[uid] = {
-            'user_id': uid,
-            'username': username,
-            'email': email,
-            'role': role_name,
-            'total_logins': len(ulogs),
-            'success_count': sum(1 for x in ulogs if x.action == 'LOGIN_SUCCESS'),
-            'failed_count': sum(1 for x in ulogs if x.action in ['LOGIN_FAILED', 'LOGIN_BLOCKED_LOCKED', 'ACCOUNT_LOCKED']),
-            'first_login': sorted_times[0],
-            'last_login': sorted_times[-1],
-            'duration_label': format_duration(diff_secs, len(ulogs)),
-            'diff_seconds': diff_secs,
-            'sessions': ulogs
-        }
-
-    unique_users_list = sorted(user_stats.values(), key=lambda s: s['last_login'], reverse=True)
-
-    # 4. Metrics for stats cards
+    # Metrics for stats cards
     today_logins_count = AuditLog.query.filter(
         AuditLog.action == 'LOGIN_SUCCESS',
         AuditLog.timestamp >= today_start,
@@ -443,8 +408,6 @@ def audit_logs():
     return render_template(
         'admin/audit_logs.html',
         logs=logs,
-        user_stats=user_stats,
-        unique_users_list=unique_users_list,
         filter_type=filter_type,
         selected_date=date_str,
         today_logins_count=today_logins_count,
