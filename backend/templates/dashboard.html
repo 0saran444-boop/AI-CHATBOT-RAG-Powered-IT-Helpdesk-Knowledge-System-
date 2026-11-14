@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - IT Helpdesk RAG{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <!-- Welcome Banner -->
+  <div class="welcome-banner">
+    <div>
+      <h2>Welcome back, {{ current_user.username }}!</h2>
+      <p class="subtitle">
+        Signed in as <strong>{{ current_user.role.name }}</strong> &bull; IT Helpdesk & RAG-Assisted Incident Resolution
+      </p>
+    </div>
+    {% if current_user.is_employee %}
+      <a href="{{ url_for('tickets.create_ticket') }}" class="btn-primary" style="width: auto; padding: 0.65rem 1.25rem;">+ Create New Ticket</a>
+    {% else %}
+      <a href="{{ url_for('tickets.list_tickets') }}" class="btn-primary" style="width: auto; padding: 0.65rem 1.25rem;">Open Ticket Queue</a>
+    {% endif %}
+  </div>
+
+  <!-- Role-specific metric cards -->
+  <div class="stats-grid">
+    {% if current_user.is_employee %}
+      <div class="stat-card">
+        <span class="stat-label">My Open Tickets</span>
+        <span class="stat-number">{{ open_count or 0 }}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Resolved Tickets</span>
+        <span class="stat-number stat-success">{{ resolved_count or 0 }}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Knowledge Base Status</span>
+        <span class="stat-number" style="font-size: 1.15rem; color: var(--primary);">Active RAG Ingestion</span>
+      </div>
+    {% else %}
+      <div class="stat-card">
+        <span class="stat-label">Assigned to Me</span>
+        <span class="stat-number">{{ assigned_count or 0 }}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Unassigned Queue</span>
+        <span class="stat-number" style="color: var(--warning);">{{ unassigned_count or 0 }}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Critical / High Priority</span>
+        <span class="stat-number stat-danger">{{ critical_count or 0 }}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">SLA Near Breach / Breached</span>
+        <span class="stat-number" style="color: #b91c1c;">{{ sla_alert_count or 0 }}</span>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Recent Tickets Section -->
+  <div class="section-card">
+    <div class="section-header">
+      <h3>{% if current_user.is_employee %}My Recent Support Tickets{% else %}Active Ticket Queue{% endif %}</h3>
+      <a href="{{ url_for('tickets.list_tickets') }}" class="view-all-link">View all &rarr;</a>
+    </div>
+
+    {% if recent_tickets %}
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Ticket ID</th>
+              <th>Issue Title</th>
+              <th>Category</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th>SLA Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in recent_tickets %}
+              <tr>
+                <td><span class="ticket-badge">{{ t.ticket_number }}</span></td>
+                <td style="font-weight: 500;">{{ t.title }}</td>
+                <td>{{ t.category.name if t.category else 'General' }}</td>
+                <td>
+                  <span class="priority-badge priority-{{ t.priority|lower }}">{{ t.priority }}</span>
+                </td>
+                <td>
+                  <span class="status-badge status-{{ t.status|lower }}">{{ t.status }}</span>
+                </td>
+                <td>
+                  {% if t.is_resolved %}
+                    <span class="sla-badge sla-met">Met</span>
+                  {% elif t.sla_status == 'BREACHED' %}
+                    <span class="sla-badge sla-breached">Breached</span>
+                  {% elif t.sla_status == 'NEAR_BREACH' %}
+                    <span class="sla-badge sla-warning">Near Breach</span>
+                  {% else %}
+                    <span class="sla-badge sla-normal">{{ t.time_remaining_str }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <a href="{{ url_for('tickets.view_ticket', ticket_id=t.id) }}" class="btn-action">Workspace &rarr;</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <p>No support tickets found.</p>
+        {% if current_user.is_employee %}
+          <a href="{{ url_for('tickets.create_ticket') }}" class="btn-primary" style="display: inline-block; width: auto; margin-top: 1rem;">Create Your First Ticket</a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

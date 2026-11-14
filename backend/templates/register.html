@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Account - IT Helpdesk RAG</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='2') }}">
+  <style>
+    /* Immediate browser override: disable Edge/IE native password reveal button */
+    input[type="password"]::-ms-reveal,
+    input[type="password"]::-ms-clear,
+    input::-ms-reveal,
+    input::-ms-clear {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="brand-icon">
+          <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="IT Helpdesk Logo">
+        </div>
+        <h1>Create Account</h1>
+        <p>Register to request IT help or manage tickets</p>
+      </div>
+
+      <!-- Flash Messages -->
+      <div class="alerts-container">
+        <div id="client-validation-error" class="alert alert-danger" style="display: none;"></div>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}">
+                <span>{{ message }}</span>
+                <button type="button" class="alert-close" aria-label="Close">&times;</button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+      </div>
+
+      <!-- Registration Form -->
+      <form id="registerForm" action="{{ url_for('auth.register') }}" method="POST">
+        <div class="form-group">
+          <label class="form-label" for="username">Username</label>
+          <input 
+            type="text" 
+            id="username" 
+            name="username" 
+            class="form-input" 
+            placeholder="e.g. john_doe" 
+            value="{{ username or '' }}" 
+            required 
+            minlength="3"
+            autofocus
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="email">Work Email</label>
+          <input 
+            type="email" 
+            id="email" 
+            name="email" 
+            class="form-input" 
+            placeholder="e.g. john@organization.com" 
+            value="{{ email or '' }}" 
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Account Role</label>
+          <div style="display: flex; align-items: center; gap: 0.6rem; padding: 0.65rem 0.85rem; background: #f8fafc; border: 1px solid var(--input-border); border-radius: var(--radius-md);">
+            <span class="badge badge-Employee" style="font-size: 0.85rem;">Employee</span>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Standard IT Helpdesk Access</span>
+          </div>
+          <input type="hidden" name="role" value="Employee">
+          <small class="form-hint">Self-registration is restricted to Employee accounts. Support Agent and Admin roles are granted by IT Administrators.</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="password">Password (Advance Security)</label>
+          <div class="input-wrapper">
+            <input 
+              type="password" 
+              id="password" 
+              name="password" 
+              class="form-input" 
+              placeholder="Min 8 chars, uppercase, lowercase, digit & symbol" 
+              minlength="8"
+              required
+            >
+            <button type="button" class="toggle-password" data-target="password" aria-label="Toggle password visibility" title="Show / Hide password">
+              <svg class="eye-icon eye-open" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg class="eye-icon eye-closed" style="display: none;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </button>
+          </div>
+          <small class="form-hint">Must contain at least 8 characters with A-Z, a-z, 0-9, and a special character (!@#$%^&*).</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="confirm_password">Confirm Password</label>
+          <div class="input-wrapper">
+            <input 
+              type="password" 
+              id="confirm_password" 
+              name="confirm_password" 
+              class="form-input" 
+              placeholder="Repeat your password" 
+              minlength="8"
+              required
+            >
+            <button type="button" class="toggle-password" data-target="confirm_password" aria-label="Toggle password visibility" title="Show / Hide password">
+              <svg class="eye-icon eye-open" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg class="eye-icon eye-closed" style="display: none;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-primary" style="margin-top: 0.5rem;">Create Account</button>
+      </form>
+
+      <div class="auth-footer">
+        Already have an account? <a href="{{ url_for('auth.login') }}">Sign in here</a>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
+

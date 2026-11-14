@@ -1,0 +1,286 @@
+{% extends 'base.html' %}
+
+{% block title %}Knowledge Base Management - IT Helpdesk RAG{% endblock %}
+
+{% block content %}
+<div class="tickets-page-container">
+  <div class="page-header-row">
+    <div>
+      <h2>RAG Knowledge Base & Technical Documentation</h2>
+      <p class="subtitle">Upload SOPs, IT guides, and manuals with custom headings for vector indexing and AI retrieval</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+      <a href="{{ url_for('knowledge.test_search') }}" class="btn-secondary">🔍 Test Vector Search</a>
+    </div>
+  </div>
+
+  <!-- Document Upload Box (Admins & Managers / Support Agents) -->
+  {% if not current_user.is_employee %}
+  <div class="panel-card" style="margin-bottom: 2rem; background: #ffffff; border: 1px solid var(--card-border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: 1.5rem;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+      <div>
+        <h4 style="margin: 0; font-size: 1.1rem; color: #0f172a; display: flex; align-items: center; gap: 0.5rem;">
+          <span>📤</span> Upload Internal Technical Document
+        </h4>
+        <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #64748b;">
+          Add company SOPs, manuals, and troubleshooting guides with custom headings for AI retrieval.
+        </p>
+      </div>
+      <span class="category-pill" style="background: #e0e7ff; color: #4338ca; font-weight: 600;">
+        {% if current_user.is_admin %}Admin &bull; Manager Authorized{% else %}Manager Authorized{% endif %}
+      </span>
+    </div>
+
+    <form action="{{ url_for('knowledge.upload') }}" method="POST" enctype="multipart/form-data">
+      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+        <!-- Heading / Title Input -->
+        <div>
+          <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #334155; margin-bottom: 0.35rem;">
+            Document Heading / Title <span style="color: var(--danger);">*</span>
+          </label>
+          <input 
+            type="text" 
+            name="title" 
+            class="form-input" 
+            placeholder="e.g. Corporate VPN Setup & Troubleshooting SOP" 
+            required
+            style="width: 100%;"
+          >
+        </div>
+
+        <!-- Category Dropdown -->
+        <div>
+          <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #334155; margin-bottom: 0.35rem;">
+            Category / Domain
+          </label>
+          <select name="category" class="form-select" style="width: 100%;">
+            <option value="Network & VPN">Network & VPN</option>
+            <option value="Hardware & Printer">Hardware & Printer</option>
+            <option value="Software & Cloud">Software & Cloud</option>
+            <option value="Security & Access">Security & Access</option>
+            <option value="General IT SOP" selected>General IT SOP</option>
+            <option value="Training & Notes">Training & Notes</option>
+            <option value="Miscellaneous">Miscellaneous</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr auto; gap: 1rem; align-items: flex-end;">
+        <!-- File Picker -->
+        <div>
+          <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #334155; margin-bottom: 0.35rem;">
+            Select Document File (PDF, DOCX, TXT, MD) <span style="color: var(--danger);">*</span>
+          </label>
+          <input 
+            type="file" 
+            name="document" 
+            class="form-file-input" 
+            required 
+            accept=".pdf,.docx,.txt,.md"
+            style="width: 100%; padding: 0.45rem; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: var(--radius-md);"
+          >
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn-primary" style="width: auto; padding: 0.65rem 1.75rem; white-space: nowrap; height: 42px;">
+          + Upload & Ingest
+        </button>
+      </div>
+
+      <small class="form-hint" style="margin-top: 0.75rem; display: block; color: #64748b; font-size: 0.8rem;">
+        ⚡ Supported formats: <strong>PDF (.pdf), Word (.docx), Plain text (.txt), Markdown (.md)</strong>. Documents are automatically chunked, embedded into the FAISS vector database, and cited by the AI assistant.
+      </small>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- Documents Table -->
+  <div class="section-card">
+    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <h3>Indexed Knowledge Documents ({{ documents|length }}) &bull; {{ total_chunks }} Total Vector Chunks</h3>
+    </div>
+
+    {% if documents %}
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="min-width: 240px;">Document Heading</th>
+              <th style="min-width: 160px; text-align: center;">View Option</th>
+              <th>Category</th>
+              <th>Format</th>
+              <th>Size</th>
+              <th>Vector Chunks</th>
+              <th>Status</th>
+              <th>Uploaded By</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for doc in documents %}
+              <tr>
+                <!-- 1. Document Heading -->
+                <td>
+                  <a href="{{ url_for('knowledge.view_document', doc_id=doc.id) }}" target="_blank" style="font-weight: 700; color: #1e3a8a; text-decoration: none; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 0.35rem;" title="View document file in new tab">
+                    📄 {{ doc.display_title }}
+                  </a>
+                  <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.15rem;">
+                    File: <code>{{ doc.filename }}</code>
+                  </div>
+                  {% if doc.error_message %}
+                    <div style="font-size: 0.8rem; color: var(--danger); font-weight: normal; margin-top: 0.2rem;">Error: {{ doc.error_message }}</div>
+                  {% endif %}
+                </td>
+
+                <!-- 2. Dedicated View Option Column (Raw File View + Headers View) -->
+                <td style="text-align: center; white-space: nowrap;">
+                  <div style="display: inline-flex; gap: 0.4rem; align-items: center; justify-content: center;">
+                    <!-- 👁️ View: Opens raw document directly in browser tab -->
+                    <a 
+                      href="{{ url_for('knowledge.view_document', doc_id=doc.id) }}" 
+                      target="_blank" 
+                      class="btn-action" 
+                      style="color: #1d4ed8; background: #eff6ff; border: 1px solid #bfdbfe; font-weight: 600; font-size: 0.825rem; padding: 0.35rem 0.75rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.3rem;"
+                      title="View original document in browser tab"
+                    >
+                      👁️ View
+                    </a>
+
+                    <!-- 📑 Headers: Opens structured document headers outline page -->
+                    <a 
+                      href="{{ url_for('knowledge.document_detail', doc_id=doc.id) }}" 
+                      class="btn-action" 
+                      style="color: #0f766e; background: #f0fdf4; border: 1px solid #bbf7d0; font-weight: 600; font-size: 0.825rem; padding: 0.35rem 0.65rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.25rem;"
+                      title="View all section headers & content"
+                    >
+                      📑 Headers
+                    </a>
+                  </div>
+                </td>
+
+                <!-- 3. Category -->
+                <td>
+                  <span class="category-pill">{{ doc.category or 'General IT' }}</span>
+                </td>
+
+                <!-- 4. Format -->
+                <td><span class="category-pill" style="background: #f1f5f9; color: #475569;">{{ doc.file_type }}</span></td>
+
+                <!-- 5. Size -->
+                <td>{{ (doc.file_size / 1024)|round(1) }} KB</td>
+
+                <!-- 6. Vector Chunks -->
+                <td><strong>{{ doc.chunk_count }}</strong> chunks</td>
+
+                <!-- 7. Status -->
+                <td>
+                  <span class="status-badge status-{{ doc.status|lower }}">{{ doc.status }}</span>
+                </td>
+
+                <!-- 8. Uploaded By -->
+                <td style="font-size: 0.85rem; color: var(--text-muted);">
+                  <strong>{{ doc.uploader.username if doc.uploader else 'Admin' }}</strong><br>
+                  <span style="font-size: 0.75rem;">{{ doc.created_at.strftime('%b %d, %Y') }}</span>
+                </td>
+
+                <!-- 9. Actions Column (Cleaned: Edit, Reindex, Delete) -->
+                <td>
+                  <div style="display: flex; gap: 0.35rem; align-items: center; flex-wrap: wrap;">
+                    {% if not current_user.is_employee %}
+                      <button 
+                        type="button" 
+                        class="btn-action" 
+                        title="Edit Heading & Category"
+                        onclick="openEditModal({{ doc.id }}, '{{ doc.display_title|replace("'", "\\'") }}', '{{ doc.category or "General IT SOP" }}')"
+                      >
+                        ✏️ Edit
+                      </button>
+                    {% endif %}
+                    <form action="{{ url_for('knowledge.reprocess', doc_id=doc.id) }}" method="POST" style="margin: 0;">
+                      <button type="submit" class="btn-action" title="Reprocess embeddings">Reindex</button>
+                    </form>
+                    {% if not current_user.is_employee %}
+                      <form action="{{ url_for('knowledge.delete', doc_id=doc.id) }}" method="POST" onsubmit="return confirm('Delete this document and remove its chunks from FAISS?');" style="margin: 0;">
+                        <button type="submit" class="btn-action" style="color: var(--danger);">Delete</button>
+                      </form>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <p>No documents uploaded yet. Upload your first IT SOP with a custom heading to empower the RAG assistant.</p>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ============================================== -->
+<!-- ✏️ Edit Heading Modal for Admin & Manager -->
+<!-- ============================================== -->
+<div id="editHeadingModal" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; align-items: center; justify-content: center; padding: 1rem;">
+  <div style="background: #ffffff; border-radius: var(--radius-lg); width: 100%; max-width: 500px; box-shadow: var(--shadow-lg); overflow: hidden;">
+    <div style="padding: 1.25rem 1.5rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="margin: 0; font-size: 1.1rem; color: #0f172a;">✏️ Edit Document Heading</h3>
+      <button type="button" onclick="closeEditModal()" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: #64748b;">&times;</button>
+    </div>
+    <form id="editHeadingForm" method="POST" style="padding: 1.5rem;">
+      <div style="margin-bottom: 1rem;">
+        <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #334155; margin-bottom: 0.35rem;">
+          Document Heading / Title <span style="color: var(--danger);">*</span>
+        </label>
+        <input type="text" name="title" id="editModalTitle" class="form-input" required style="width: 100%;">
+      </div>
+      <div style="margin-bottom: 1.5rem;">
+        <label style="display: block; font-size: 0.875rem; font-weight: 600; color: #334155; margin-bottom: 0.35rem;">
+          Category / Domain
+        </label>
+        <select name="category" id="editModalCategory" class="form-select" style="width: 100%;">
+          <option value="Network & VPN">Network & VPN</option>
+          <option value="Hardware & Printer">Hardware & Printer</option>
+          <option value="Software & Cloud">Software & Cloud</option>
+          <option value="Security & Access">Security & Access</option>
+          <option value="General IT SOP">General IT SOP</option>
+          <option value="Training & Notes">Training & Notes</option>
+          <option value="Miscellaneous">Miscellaneous</option>
+        </select>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+        <button type="button" onclick="closeEditModal()" class="btn-secondary" style="width: auto;">Cancel</button>
+        <button type="submit" class="btn-primary" style="width: auto;">Save Heading</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// ==============================================
+// ✏️ Edit Heading Modal Logic
+// ==============================================
+function openEditModal(docId, currentTitle, currentCategory) {
+  const modal = document.getElementById('editHeadingModal');
+  const form = document.getElementById('editHeadingForm');
+  const titleInput = document.getElementById('editModalTitle');
+  const catInput = document.getElementById('editModalCategory');
+
+  form.action = `/knowledge/${docId}/update`;
+  titleInput.value = currentTitle;
+  catInput.value = currentCategory;
+  modal.style.display = 'flex';
+  titleInput.focus();
+}
+
+function closeEditModal() {
+  document.getElementById('editHeadingModal').style.display = 'none';
+}
+
+window.addEventListener('click', function(e) {
+  const editModal = document.getElementById('editHeadingModal');
+  if (e.target === editModal) closeEditModal();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,413 @@
+{% extends 'base.html' %}
+
+{% block title %}Data Analytics & Operational Intelligence - IT Helpdesk RAG{% endblock %}
+
+{% block content %}
+<div class="tickets-page-container">
+  <!-- Page Header & Action Bar -->
+  <div class="page-header-row">
+    <div>
+      <h2>IT Data Analytics & Operational Intelligence</h2>
+      <p class="subtitle">Real-time incident trends, SLA compliance rates, engineer throughput, and AI model performance</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+      <a href="{{ url_for('admin.export_csv') }}" class="btn-primary" style="width: auto; padding: 0.6rem 1.25rem; display: flex; align-items: center; gap: 0.4rem;">
+        📥 Export Analytics (CSV)
+      </a>
+      <a href="{{ url_for('admin.dashboard') }}" class="btn-secondary">&larr; Back to Admin Console</a>
+    </div>
+  </div>
+
+  <!-- Row 1: High Level Executive KPI Cards -->
+  <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+    <div class="stat-card">
+      <span class="stat-label">Total Ingested Tickets</span>
+      <span class="stat-number">{{ total_tickets }}</span>
+      <small style="color: var(--text-muted); font-size: 0.8rem;">Open Queue: {{ open_count }}</small>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Resolution Rate</span>
+      <span class="stat-number stat-success">{{ resolution_rate }}%</span>
+      <small style="color: var(--text-muted); font-size: 0.8rem;">{{ resolved_count }} of {{ total_tickets }} resolved</small>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Mean Resolution Time</span>
+      <span class="stat-number" style="color: var(--primary);">{{ avg_resolution_hours }} <span style="font-size: 1rem; font-weight: 500;">hrs</span></span>
+      <small style="color: var(--text-muted); font-size: 0.8rem;">Average turnaround</small>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">SLA Compliance</span>
+      <span class="stat-number" style="color: #047857;">{{ sla_compliance_rate }}%</span>
+      <small style="color: var(--text-muted); font-size: 0.8rem;">Met deadline criteria</small>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">CSAT Satisfaction</span>
+      <span class="stat-number" style="color: #f59e0b;">{{ avg_csat }} <span style="font-size: 1rem;">★</span></span>
+      <small style="color: var(--text-muted); font-size: 0.8rem;">From {{ feedback_count }} rating(s)</small>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">AI RAG Helpfulness</span>
+      <span class="stat-number" style="color: #7c3aed;">{{ ai_helpfulness_rate }}%</span>
+      <small style="color: var(--text-muted); font-size: 0.8rem;">User positive feedback</small>
+    </div>
+  </div>
+
+  <!-- Row 2: Two Visual Analytics Charts -->
+  <div class="workspace-grid" style="margin-top: 1.5rem;">
+    <!-- Chart 1: 7-Day Trend (Dual Line / Area Chart) -->
+    <div class="panel-card">
+      <div class="panel-header" style="justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="font-size: 1.25rem;">📈</span>
+          <h3 style="margin: 0;">7-Day Ticket Volume & Resolution Trend</h3>
+        </div>
+        <span class="panel-tag">Daily Trajectory</span>
+      </div>
+      <div class="panel-body">
+        <canvas id="trendChartCanvas" height="220" style="width: 100%; display: block;"></canvas>
+        <div style="display: flex; justify-content: center; gap: 1.5rem; margin-top: 0.75rem; font-size: 0.85rem;">
+          <span style="display: inline-flex; align-items: center; gap: 0.4rem;">
+            <span style="width: 12px; height: 12px; background: #2563eb; border-radius: 2px;"></span> Tickets Created
+          </span>
+          <span style="display: inline-flex; align-items: center; gap: 0.4rem;">
+            <span style="width: 12px; height: 12px; background: #10b981; border-radius: 2px;"></span> Tickets Resolved
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart 2: SLA Health & Incident Distribution -->
+    <div class="panel-card">
+      <div class="panel-header" style="justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <span style="font-size: 1.25rem;">⏱️</span>
+          <h3 style="margin: 0;">Active SLA Compliance Health</h3>
+        </div>
+        <span class="panel-tag">Real-Time Risk</span>
+      </div>
+      <div class="panel-body">
+        <canvas id="slaChartCanvas" height="180" style="width: 100%; display: block;"></canvas>
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; text-align: center; margin-top: 1rem;">
+          <div style="padding: 0.6rem; background: #ecfdf5; border-radius: var(--radius-sm); border: 1px solid #a7f3d0;">
+            <strong style="color: #065f46; font-size: 1.15rem; display: block;">{{ sla_within }}</strong>
+            <span style="font-size: 0.75rem; color: #047857; text-transform: uppercase; font-weight: 600;">Within SLA</span>
+          </div>
+          <div style="padding: 0.6rem; background: #fffbeb; border-radius: var(--radius-sm); border: 1px solid #fde68a;">
+            <strong style="color: #92400e; font-size: 1.15rem; display: block;">{{ sla_near_breach }}</strong>
+            <span style="font-size: 0.75rem; color: #b45309; text-transform: uppercase; font-weight: 600;">Near Breach (&lt;1h)</span>
+          </div>
+          <div style="padding: 0.6rem; background: #fef2f2; border-radius: var(--radius-sm); border: 1px solid #fecaca;">
+            <strong style="color: #991b1b; font-size: 1.15rem; display: block;">{{ sla_breached }}</strong>
+            <span style="font-size: 0.75rem; color: #b91c1c; text-transform: uppercase; font-weight: 600;">Breached</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 3: AI RAG Model Performance & Category Breakdown -->
+  <div class="workspace-grid" style="margin-top: 1.5rem;">
+    <!-- AI Evaluation Panel -->
+    <div class="panel-card ai-analysis-panel">
+      <div class="panel-header ai-panel-header">
+        <div class="ai-brand-title">
+          <span class="ai-icon">🤖</span>
+          <h3>AI RAG Acceptance & Engineer Review</h3>
+        </div>
+        <span class="ai-confidence-pill">Acceptance: {{ ai_acceptance_rate }}%</span>
+      </div>
+      <div class="panel-body">
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Human-in-the-Loop review statistics evaluating how often engineers approve, modify, or reject AI-generated resolution drafts.
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.35rem;">
+              <span>✅ Accepted (Unchanged)</span>
+              <strong>{{ accepted_ai }} ({{ acc_rate }}%)</strong>
+            </div>
+            <div style="background: #e2e8f0; border-radius: 9999px; height: 10px; overflow: hidden;">
+              <div style="background: var(--success); width: {{ acc_rate }}%; height: 100%;"></div>
+            </div>
+          </div>
+
+          <div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.35rem;">
+              <span>✏️ Modified / Refined</span>
+              <strong>{{ modified_ai }} ({{ mod_rate }}%)</strong>
+            </div>
+            <div style="background: #e2e8f0; border-radius: 9999px; height: 10px; overflow: hidden;">
+              <div style="background: #0284c7; width: {{ mod_rate }}%; height: 100%;"></div>
+            </div>
+          </div>
+
+          <div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.35rem;">
+              <span>❌ Rejected</span>
+              <strong>{{ rejected_ai }} ({{ rej_rate }}%)</strong>
+            </div>
+            <div style="background: #e2e8f0; border-radius: 9999px; height: 10px; overflow: hidden;">
+              <div style="background: var(--danger); width: {{ rej_rate }}%; height: 100%;"></div>
+            </div>
+          </div>
+
+          <div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.35rem;">
+              <span>⚠️ Escalated to Tier 2</span>
+              <strong>{{ escalated_ai }} ({{ esc_rate }}%)</strong>
+            </div>
+            <div style="background: #e2e8f0; border-radius: 9999px; height: 10px; overflow: hidden;">
+              <div style="background: #eab308; width: {{ esc_rate }}%; height: 100%;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category & Priority Distribution -->
+    <div class="panel-card">
+      <div class="panel-header">
+        <h3>Incidents by Priority Distribution</h3>
+        <span class="panel-tag">Severity Classification</span>
+      </div>
+      <div class="panel-body">
+        <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+          {% for p, count in priority_counts.items() %}
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.65rem 0.85rem; background: #f8fafc; border-radius: var(--radius-sm); border-left: 4px solid {% if p == 'CRITICAL' %}#ef4444{% elif p == 'HIGH' %}#f59e0b{% elif p == 'MEDIUM' %}#3b82f6{% else %}#94a3b8{% endif %};">
+              <div style="display: flex; align-items: center; gap: 0.6rem;">
+                <span class="priority-badge priority-{{ p|lower }}">{{ p }}</span>
+                <span style="font-size: 0.85rem; color: var(--text-muted);">
+                  {% if p == 'CRITICAL' %}4h SLA SLA target{% elif p == 'HIGH' %}8h SLA target{% elif p == 'MEDIUM' %}24h SLA target{% else %}48h SLA target{% endif %}
+                </span>
+              </div>
+              <strong style="font-size: 1.15rem;">{{ count }}</strong>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Row 4: Support Engineer Workload & Productivity Analytics Table -->
+  <div class="section-card" style="margin-top: 1.5rem;">
+    <div class="section-header">
+      <h3>Support Engineer Workload & Resolution Productivity</h3>
+      <span class="panel-tag">Team Throughput</span>
+    </div>
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Support Engineer</th>
+            <th>Role</th>
+            <th>Assigned Tickets</th>
+            <th>Resolved Tickets</th>
+            <th>Resolution Rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for eng in engineer_stats %}
+            <tr>
+              <td style="font-weight: 600;">{{ eng.username }}</td>
+              <td><span class="badge badge-{{ eng.role|replace(' ', '_') }}">{{ eng.role }}</span></td>
+              <td><strong>{{ eng.assigned }}</strong></td>
+              <td><span style="color: var(--success); font-weight: 600;">{{ eng.resolved }}</span></td>
+              <td>
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <div style="flex: 1; max-width: 140px; background: #e2e8f0; border-radius: 9999px; height: 8px; overflow: hidden;">
+                    <div style="background: var(--primary); width: {{ eng.rate }}%; height: 100%;"></div>
+                  </div>
+                  <span style="font-size: 0.85rem; font-weight: 600;">{{ eng.rate }}%</span>
+                </div>
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="5" style="text-align: center; color: var(--text-muted);">No support engineers registered.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Row 5: Incidents by Category Analytics Table -->
+  <div class="section-card" style="margin-top: 1.5rem;">
+    <div class="section-header">
+      <h3>Incident Distribution by IT Category</h3>
+    </div>
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Category Name</th>
+            <th>Total Tickets</th>
+            <th>Proportion of Overall Volume</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in cat_counts %}
+            {% if c.count > 0 %}
+              <tr>
+                <td style="font-weight: 600;">{{ c.name }}</td>
+                <td><strong>{{ c.count }}</strong></td>
+                <td>
+                  <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    {% set pct = (c.count / total_tickets * 100)|round(1) if total_tickets > 0 else 0 %}
+                    <div style="flex: 1; max-width: 160px; background: #e2e8f0; border-radius: 9999px; height: 8px; overflow: hidden;">
+                      <div style="background: var(--primary); width: {{ pct }}%; height: 100%;"></div>
+                    </div>
+                    <span style="font-size: 0.85rem; font-weight: 600;">{{ pct }}%</span>
+                  </div>
+                </td>
+              </tr>
+            {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Dependency-free HTML5 Canvas Interactive Charts Script -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // 1. Draw 7-Day Trend Chart on Canvas
+  const trendCanvas = document.getElementById('trendChartCanvas');
+  if (trendCanvas) {
+    const ctx = trendCanvas.getContext('2d');
+    const width = trendCanvas.offsetWidth || 500;
+    const height = 220;
+    trendCanvas.width = width;
+    trendCanvas.height = height;
+
+    const labels = {{ trend_labels|tojson }};
+    const createdData = {{ trend_created|tojson }};
+    const resolvedData = {{ trend_resolved|tojson }};
+
+    const maxVal = Math.max(...createdData, ...resolvedData, 5);
+    const padding = { top: 20, right: 30, bottom: 40, left: 40 };
+    const chartW = width - padding.left - padding.right;
+    const chartH = height - padding.top - padding.bottom;
+
+    // Draw grid lines
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.font = '11px sans-serif';
+    ctx.fillStyle = '#64748b';
+
+    for (let i = 0; i <= 4; i++) {
+      const y = padding.top + (chartH / 4) * i;
+      const val = Math.round(maxVal - (maxVal / 4) * i);
+      ctx.beginPath();
+      ctx.moveTo(padding.left, y);
+      ctx.lineTo(width - padding.right, y);
+      ctx.stroke();
+      ctx.fillText(val, padding.left - 25, y + 4);
+    }
+
+    // Helper to plot lines
+    function drawLine(data, color, dotColor) {
+      if (data.length < 2) return;
+      const stepX = chartW / (data.length - 1);
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.lineJoin = 'round';
+
+      data.forEach((val, idx) => {
+        const x = padding.left + idx * stepX;
+        const y = padding.top + chartH - (val / maxVal) * chartH;
+        if (idx === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      // Draw points
+      data.forEach((val, idx) => {
+        const x = padding.left + idx * stepX;
+        const y = padding.top + chartH - (val / maxVal) * chartH;
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = dotColor;
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      });
+    }
+
+    // Draw Created (Blue) & Resolved (Green)
+    drawLine(createdData, '#2563eb', '#1d4ed8');
+    drawLine(resolvedData, '#10b981', '#059669');
+
+    // Draw X-axis labels
+    const stepX = chartW / (labels.length - 1);
+    labels.forEach((lbl, idx) => {
+      const x = padding.left + idx * stepX;
+      ctx.fillStyle = '#64748b';
+      ctx.textAlign = 'center';
+      ctx.fillText(lbl, x, height - 12);
+    });
+  }
+
+  // 2. Draw SLA Health Donut Chart on Canvas
+  const slaCanvas = document.getElementById('slaChartCanvas');
+  if (slaCanvas) {
+    const ctx = slaCanvas.getContext('2d');
+    const width = slaCanvas.offsetWidth || 350;
+    const height = 180;
+    slaCanvas.width = width;
+    slaCanvas.height = height;
+
+    const values = [
+      { label: 'Within SLA', val: {{ sla_within }}, color: '#10b981' },
+      { label: 'Near Breach', val: {{ sla_near_breach }}, color: '#f59e0b' },
+      { label: 'Breached', val: {{ sla_breached }}, color: '#ef4444' }
+    ];
+
+    const total = values.reduce((sum, item) => sum + item.val, 0);
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const radius = 65;
+    const innerRadius = 42;
+
+    if (total === 0) {
+      // Empty placeholder circle
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 20;
+      ctx.stroke();
+      ctx.font = '12px sans-serif';
+      ctx.fillStyle = '#64748b';
+      ctx.textAlign = 'center';
+      ctx.fillText('All Queues Clear', centerX, centerY + 4);
+    } else {
+      let startAngle = -Math.PI / 2;
+      values.forEach(slice => {
+        if (slice.val === 0) return;
+        const sliceAngle = (slice.val / total) * (Math.PI * 2);
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
+        ctx.arc(centerX, centerY, innerRadius, startAngle + sliceAngle, startAngle, true);
+        ctx.closePath();
+        ctx.fillStyle = slice.color;
+        ctx.fill();
+        startAngle += sliceAngle;
+      });
+
+      // Center text
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillStyle = '#1e293b';
+      ctx.textAlign = 'center';
+      ctx.fillText(total, centerX, centerY + 2);
+      ctx.font = '10px sans-serif';
+      ctx.fillStyle = '#64748b';
+      ctx.fillText('Active', centerX, centerY + 16);
+    }
+  }
+});
+</script>
+{% endblock %}

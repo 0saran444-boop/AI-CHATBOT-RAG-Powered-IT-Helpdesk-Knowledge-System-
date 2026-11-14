@@ -1,0 +1,608 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ ticket.ticket_number }} - Ticket Resolution Workspace{% endblock %}
+
+{% block content %}
+<div class="workspace-container">
+  <!-- Top Workspace Header Banner -->
+  <div class="workspace-header">
+    <div class="workspace-title-group">
+      <div class="ticket-header-badges">
+        <span class="ticket-id-large">{{ ticket.ticket_number }}</span>
+        <span class="priority-badge priority-{{ ticket.priority|lower }}">{{ ticket.priority }}</span>
+        <span class="status-badge status-{{ ticket.status|lower }}">{{ ticket.status }}</span>
+        <span class="category-pill">{{ ticket.category.name if ticket.category else 'General' }}{% if ticket.subcategory %} / {{ ticket.subcategory }}{% endif %}</span>
+      </div>
+      <h1 class="workspace-issue-title">{{ ticket.title }}</h1>
+      <div class="ticket-meta-line">
+        <span>Reported by <strong>{{ ticket.creator.username }}</strong></span> &bull;
+        <span>Created on {{ ticket.created_at.strftime('%Y-%m-%d at %H:%M') }}</span> &bull;
+        <span>Assigned to: <strong>{{ ticket.assignee.username if ticket.assignee else 'Unassigned' }}</strong></span>
+      </div>
+    </div>
+
+    <!-- SLA Monitor Pill -->
+    <div class="workspace-sla-pill">
+      <div class="sla-pill-title">SLA RESOLUTION DEADLINE</div>
+      <div class="sla-pill-countdown {% if ticket.sla_status == 'BREACHED' %}countdown-breached{% elif ticket.sla_status == 'NEAR_BREACH' %}countdown-warning{% endif %}">
+        {% if ticket.is_resolved %}
+          ✓ Resolved on {{ ticket.resolution_date.strftime('%b %d, %H:%M') if ticket.resolution_date else 'N/A' }}
+        {% else %}
+          ⏱ {{ ticket.time_remaining_str }}
+        {% endif %}
+      </div>
+      <div class="sla-pill-deadline">Target: {{ ticket.sla_deadline.strftime('%b %d, %Y %H:%M') if ticket.sla_deadline else 'N/A' }}</div>
+    </div>
+  </div>
+
+  <div class="workspace-grid">
+    <!-- Left Column: Issue, AI Analysis, and Resolution -->
+    <div class="workspace-main-column">
+
+      <!-- 1. Employee Issue Card -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <h3>Employee Issue Description</h3>
+          <span class="panel-tag">Original Report</span>
+        </div>
+        <div class="panel-body">
+          <p class="issue-description-text">{{ ticket.description }}</p>
+          {% if ticket.attachments.count() > 0 %}
+            <div class="attachments-list">
+              <strong>Attachments:</strong>
+              {% for att in ticket.attachments %}
+                <div class="attachment-item">
+                  <span>📎 {{ att.filename }}</span>
+                  <span class="att-size">({{ (att.file_size / 1024)|round(1) }} KB)</span>
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- 2. AI ANALYSIS PANEL (Core Showcase Component) -->
+      <div class="panel-card ai-analysis-panel">
+        <div class="panel-header ai-panel-header">
+          <div class="ai-brand-title">
+            <span class="ai-icon">✨</span>
+            <h3>AI ASSISTED RESOLUTION ANALYSIS</h3>
+          </div>
+          {% if ai_response %}
+            <span class="ai-confidence-pill">
+              Confidence: {{ ai_response.confidence_score }}% &bull; Status: {{ ai_response.status }}
+            </span>
+          {% endif %}
+        </div>
+
+        <div class="panel-body">
+          {% if ai_response %}
+            <!-- Issue Summary -->
+            <div class="ai-section">
+              <h4 class="ai-section-title">Issue Summary</h4>
+              <p class="ai-summary-text">{{ ai_response.issue_summary }}</p>
+            </div>
+
+            <!-- Possible Causes -->
+            <div class="ai-section">
+              <h4 class="ai-section-title">Possible Causes</h4>
+              <ul class="ai-bullet-list">
+                {% for cause in ai_response.get_causes() %}
+                  <li>{{ cause }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+
+            <!-- Recommended Steps -->
+            <div class="ai-section">
+              <h4 class="ai-section-title">Recommended Troubleshooting Steps</h4>
+              <ol class="ai-ordered-list">
+                {% for step in ai_response.get_steps() %}
+                  <li>{{ step }}</li>
+                {% endfor %}
+              </ol>
+            </div>
+
+            <!-- Supporting Knowledge Sources -->
+            <div class="ai-section">
+              <h4 class="ai-section-title">Retrieved Knowledge Base Sources</h4>
+              {% set sources = ai_response.get_sources() %}
+              {% if sources %}
+                <div class="sources-grid">
+                  {% for s in sources %}
+                    <div class="source-card">
+                      <div class="source-header">
+                        <strong>📄 {{ s.document_name }}</strong>
+                        <span class="source-relevance">Match: {{ s.relevance }}</span>
+                      </div>
+                      <div class="source-meta">Location: {{ s.section }} (Page {{ s.page }})</div>
+                      <p class="source-snippet">"{{ s.snippet }}"</p>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <p class="text-muted" style="font-size: 0.9rem;">No matching internal documents found in vector store.</p>
+              {% endif %}
+            </div>
+
+            <!-- Similar Historical Incidents -->
+            <div class="ai-section">
+              <h4 class="ai-section-title">Similar Historical Tickets</h4>
+              {% set hist_tickets = ai_response.get_similar_tickets() %}
+              {% if hist_tickets %}
+                <div class="similar-tickets-list">
+                  {% for ht in hist_tickets %}
+                    <div class="similar-ticket-card">
+                      <div class="st-header">
+                        <span class="ticket-badge">{{ ht.ticket_number }}</span>
+                        <strong>{{ ht.title }}</strong>
+                        <span class="st-score">{{ (ht.similarity_score * 100)|int }}% match</span>
+                      </div>
+                      {% if ht.root_cause and ht.root_cause != 'N/A' %}
+                        <div class="st-cause">Root Cause: <em>{{ ht.root_cause }}</em></div>
+                      {% endif %}
+                      <div class="st-resolution">Past Resolution: {{ ht.resolution_summary }}</div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <p class="text-muted" style="font-size: 0.9rem;">No previous resolved tickets matched this pattern.</p>
+              {% endif %}
+            </div>
+
+            <!-- Human-in-the-Loop Action Controls (For Engineers & Admins) -->
+            {% if not current_user.is_employee and not ticket.is_resolved %}
+              <div class="human-in-the-loop-bar">
+                <span class="hil-label">Support Engineer Review:</span>
+                <div class="hil-buttons">
+                  <form action="{{ url_for('tickets.handle_ai_action', ticket_id=ticket.id) }}" method="POST" style="display:inline;">
+                    <input type="hidden" name="action" value="APPROVE">
+                    <button type="submit" class="btn-hil btn-hil-approve" title="Accept recommendation and adopt steps">✓ Approve AI</button>
+                  </form>
+
+                  <button type="button" class="btn-hil btn-hil-modify" onclick="toggleModifyForm()">✎ Modify AI</button>
+
+                  <form action="{{ url_for('tickets.handle_ai_action', ticket_id=ticket.id) }}" method="POST" style="display:inline;">
+                    <input type="hidden" name="action" value="REJECT">
+                    <button type="submit" class="btn-hil btn-hil-reject" title="Reject suggestion and proceed manually">✕ Reject AI</button>
+                  </form>
+
+                  <button type="button" class="btn-hil btn-hil-escalate" onclick="toggleEscalateModal()">⬆ Escalate</button>
+                </div>
+              </div>
+
+              <!-- Collapsible Modify AI Form -->
+              <div id="modifyAIContainer" style="display: none; margin-top: 1rem; padding: 1rem; background: #fff; border: 1px solid var(--card-border); border-radius: var(--radius-md);">
+                <form action="{{ url_for('tickets.handle_ai_action', ticket_id=ticket.id) }}" method="POST">
+                  <input type="hidden" name="action" value="MODIFY">
+                  <label class="form-label">Support Engineer Modifications / Corrections:</label>
+                  <textarea name="modified_notes" class="form-textarea" rows="3" placeholder="Specify any corrections or customized troubleshooting steps for this incident...">{{ ai_response.modified_notes or '' }}</textarea>
+                  <button type="submit" class="btn-primary" style="margin-top: 0.5rem; width: auto;">Save Modified Recommendation</button>
+                </form>
+              </div>
+            {% endif %}
+
+          {% else %}
+            <p class="text-muted">Analyzing issue against knowledge base...</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- 3. Ticket Resolution Section -->
+      {% if ticket.is_resolved %}
+        <div class="panel-card resolution-card-complete">
+          <div class="panel-header">
+            <h3>✓ Incident Resolution Record</h3>
+            <span class="status-badge status-resolved">RESOLVED</span>
+          </div>
+          <div class="panel-body">
+            <div class="res-item">
+              <strong>Root Cause:</strong>
+              <p>{{ ticket.root_cause }}</p>
+            </div>
+            <div class="res-item">
+              <strong>Action Taken:</strong>
+              <p>{{ ticket.action_taken }}</p>
+            </div>
+            <div class="res-item">
+              <strong>Resolution Summary:</strong>
+              <p>{{ ticket.resolution_summary }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Employee Feedback Form -->
+        {% if current_user.id == ticket.created_by_id or current_user.is_admin %}
+          <div class="panel-card feedback-panel">
+            <div class="panel-header">
+              <h3>Employee Resolution Feedback</h3>
+            </div>
+            <div class="panel-body">
+              {% if ticket.feedback %}
+                <div class="feedback-display">
+                  <div class="star-rating-display">
+                    Rating: <strong>{{ '★' * ticket.feedback.rating }}{{ '☆' * (5 - ticket.feedback.rating) }}</strong> ({{ ticket.feedback.rating }}/5)
+                  </div>
+                  <div style="margin-top: 0.5rem;">
+                    Was AI Recommendation Useful? <strong>{{ 'Yes' if ticket.feedback.ai_useful else 'No' }}</strong>
+                  </div>
+                  {% if ticket.feedback.comment %}
+                    <p style="margin-top: 0.5rem; font-style: italic;">"{{ ticket.feedback.comment }}"</p>
+                  {% endif %}
+                </div>
+              {% elif current_user.id == ticket.created_by_id %}
+                <form action="{{ url_for('tickets.submit_feedback', ticket_id=ticket.id) }}" method="POST">
+                  <div class="form-group">
+                    <label class="form-label">How satisfied are you with this resolution? (1 - Poor, 5 - Excellent)</label>
+                    <select name="rating" class="form-select" style="max-width: 200px;">
+                      <option value="5">★★★★★ (5 - Excellent)</option>
+                      <option value="4">★★★★☆ (4 - Good)</option>
+                      <option value="3">★★★☆☆ (3 - Average)</option>
+                      <option value="2">★★☆☆☆ (2 - Below Average)</option>
+                      <option value="1">★☆☆☆☆ (1 - Poor)</option>
+                    </select>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Was the AI-assisted resolution suggestion helpful?</label>
+                    <div style="display: flex; gap: 1.5rem; margin-top: 0.25rem;">
+                      <label class="checkbox-label">
+                        <input type="radio" name="ai_useful" value="yes" checked> Yes, it was helpful
+                      </label>
+                      <label class="checkbox-label">
+                        <input type="radio" name="ai_useful" value="no"> No, it was not helpful
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label">Additional Comments (Optional)</label>
+                    <textarea name="comment" class="form-textarea" rows="2" placeholder="Your feedback helps improve our IT support team and AI models..."></textarea>
+                  </div>
+
+                  <button type="submit" class="btn-primary" style="width: auto;">Submit Feedback</button>
+                </form>
+              {% endif %}
+            </div>
+          </div>
+        {% endif %}
+
+      {% elif not current_user.is_employee %}
+        <!-- Resolution Form for Engineers -->
+        <div class="panel-card resolution-form-card">
+          <div class="panel-header">
+            <h3>Resolve Support Ticket</h3>
+            <span class="panel-tag">Support Engineer Workspace</span>
+          </div>
+          <div class="panel-body">
+            <form action="{{ url_for('tickets.resolve_ticket', ticket_id=ticket.id) }}" method="POST">
+              <div class="form-group">
+                <label class="form-label">Identified Root Cause <span class="required">*</span></label>
+                <input 
+                  type="text" 
+                  name="root_cause" 
+                  class="form-input" 
+                  placeholder="e.g. Internal DNS configuration mismatch on virtual adapter" 
+                  required
+                >
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Actions Taken</label>
+                <textarea 
+                  name="action_taken" 
+                  class="form-textarea" 
+                  rows="3" 
+                  placeholder="e.g. Flushed DNS cache on user workstation, verified Active Directory DNS records, and reconnected tunnel."
+                ></textarea>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Resolution Summary <span class="required">*</span></label>
+                <textarea 
+                  name="resolution_summary" 
+                  class="form-textarea" 
+                  rows="2" 
+                  placeholder="e.g. Employee successfully accessed internal company server after DNS flush." 
+                  required
+                ></textarea>
+              </div>
+
+              <button type="submit" class="btn-primary" style="width: auto; background-color: var(--success);">
+                ✓ Mark Ticket as RESOLVED
+              </button>
+            </form>
+          </div>
+        </div>
+      {% endif %}
+
+      <!-- 4. Discussion Comments Thread -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <h3 id="discussionHeader">Ticket Discussion ({{ ticket.comments.count() }})</h3>
+        </div>
+        <div class="panel-body">
+          <div class="comments-thread" id="commentsThread">
+            {% for c in ticket.ordered_comments %}
+              <div class="comment-bubble {% if c.author.is_employee %}comment-employee{% else %}comment-engineer{% endif %}">
+                <div class="comment-meta">
+                  <strong>{{ c.author.username }}</strong> ({{ c.author.role.name }}) &bull;
+                  <span>{{ c.created_at.strftime('%b %d, %H:%M') }}</span>
+                </div>
+                <p class="comment-text">{{ c.comment }}</p>
+              </div>
+            {% else %}
+              <p class="text-muted" id="noCommentsText" style="font-size: 0.9rem; margin-bottom: 1rem;">No comments added yet.</p>
+            {% endfor %}
+          </div>
+
+          <!-- Add Comment Form -->
+          <form id="commentForm" action="{{ url_for('tickets.add_comment', ticket_id=ticket.id) }}" method="POST" class="add-comment-form">
+            <textarea id="commentText" name="comment" class="form-textarea" rows="2" placeholder="Write a response or update..." required></textarea>
+            <button type="submit" id="submitCommentBtn" class="btn-secondary" style="margin-top: 0.5rem; align-self: flex-start;">Post Comment</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Sidebar Column: Workflow Controls, Assignee & Status Timeline -->
+    <div class="workspace-sidebar">
+
+      <!-- Engineer Controls Card -->
+      {% if not current_user.is_employee %}
+        <div class="sidebar-card">
+          <h4>Workflow Controls</h4>
+          
+          <!-- Assign Ticket Form -->
+          <form id="assignForm" action="{{ url_for('tickets.assign_ticket', ticket_id=ticket.id) }}" method="POST" class="sidebar-form">
+            <label class="sidebar-label">Assign Engineer:</label>
+            <div style="display: flex; gap: 0.5rem;">
+              <select name="engineer_id" class="form-select" style="font-size: 0.85rem;">
+                {% for eng in engineers %}
+                  <option value="{{ eng.id }}" {% if ticket.assigned_to_id == eng.id %}selected{% endif %}>
+                    {{ eng.username }} ({{ eng.role.name }})
+                  </option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="btn-secondary" style="padding: 0.4rem 0.75rem;">Assign</button>
+            </div>
+          </form>
+
+          <!-- Status Lifecycle Update Form -->
+          <form id="statusForm" action="{{ url_for('tickets.update_status', ticket_id=ticket.id) }}" method="POST" class="sidebar-form" style="margin-top: 1rem;">
+            <label class="sidebar-label">Update Status:</label>
+            <div style="display: flex; gap: 0.5rem;">
+              <select name="status" class="form-select" style="font-size: 0.85rem;">
+                <option value="IN_PROGRESS" {% if ticket.status == 'IN_PROGRESS' %}selected{% endif %}>IN_PROGRESS</option>
+                <option value="WAITING_FOR_USER" {% if ticket.status == 'WAITING_FOR_USER' %}selected{% endif %}>WAITING_FOR_USER</option>
+                <option value="RESOLVED" {% if ticket.status == 'RESOLVED' %}selected{% endif %}>RESOLVED</option>
+                <option value="CLOSED" {% if ticket.status == 'CLOSED' %}selected{% endif %}>CLOSED</option>
+              </select>
+              <button type="submit" class="btn-secondary" style="padding: 0.4rem 0.75rem;">Update</button>
+            </div>
+          </form>
+        </div>
+      {% endif %}
+
+      <!-- Ticket Status History Timeline -->
+      <div class="sidebar-card">
+        <h4>Status History</h4>
+        <div class="timeline" id="statusTimeline">
+          {% for h in ticket.status_history %}
+            <div class="timeline-item">
+              <div class="timeline-dot"></div>
+              <div class="timeline-content">
+                <span class="timeline-status">{{ h.new_status }}</span>
+                <span class="timeline-date">{{ h.created_at.strftime('%b %d, %H:%M') }}</span>
+                {% if h.notes %}
+                  <p class="timeline-notes">{{ h.notes }}</p>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function escapeHtml(text) {
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+  return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
+function showToast(msg, isSuccess = true) {
+  const container = document.querySelector('.alerts-container') || document.body;
+  const alert = document.createElement('div');
+  alert.className = `alert alert-${isSuccess ? 'success' : 'danger'}`;
+  alert.style.position = 'fixed';
+  alert.style.top = '1.5rem';
+  alert.style.right = '1.5rem';
+  alert.style.zIndex = '9999';
+  alert.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1)';
+  alert.innerHTML = `<span>${escapeHtml(msg)}</span>`;
+  document.body.appendChild(alert);
+  setTimeout(() => {
+    alert.style.transition = 'opacity 0.3s ease';
+    alert.style.opacity = '0';
+    setTimeout(() => alert.remove(), 300);
+  }, 3000);
+}
+
+// 1. AJAX for Posting Comments
+const commentForm = document.getElementById('commentForm');
+if (commentForm) {
+  commentForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const commentInput = document.getElementById('commentText');
+    const submitBtn = document.getElementById('submitCommentBtn');
+    const text = commentInput.value.trim();
+    if (!text) return;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Posting...';
+
+    try {
+      const res = await fetch("{{ url_for('tickets.add_comment', ticket_id=ticket.id) }}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ comment: text })
+      });
+      const data = await res.json();
+      if (data.success && data.comment) {
+        commentInput.value = '';
+        const thread = document.getElementById('commentsThread');
+        const noText = document.getElementById('noCommentsText');
+        if (noText) noText.remove();
+
+        const bubble = document.createElement('div');
+        bubble.className = `comment-bubble ${data.comment.is_employee ? 'comment-employee' : 'comment-engineer'}`;
+        bubble.innerHTML = `
+          <div class="comment-meta">
+            <strong>${escapeHtml(data.comment.author)}</strong> (${escapeHtml(data.comment.role)}) &bull;
+            <span>${escapeHtml(data.comment.created_at)}</span>
+          </div>
+          <p class="comment-text">${escapeHtml(data.comment.text)}</p>
+        `;
+        thread.appendChild(bubble);
+        bubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        const header = document.getElementById('discussionHeader');
+        if (header) {
+          const count = thread.querySelectorAll('.comment-bubble').length;
+          header.textContent = `Ticket Discussion (${count})`;
+        }
+        showToast('Comment posted successfully!');
+      } else {
+        showToast(data.error || 'Failed to post comment', false);
+      }
+    } catch (err) {
+      console.error('AJAX Comment error, falling back:', err);
+      commentForm.submit();
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Post Comment';
+    }
+  });
+}
+
+// 2. AJAX for Status Update
+const statusForm = document.getElementById('statusForm');
+if (statusForm) {
+  statusForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const select = statusForm.querySelector('select[name="status"]');
+    const btn = statusForm.querySelector('button[type="submit"]');
+    const newStatus = select.value;
+    btn.disabled = true;
+
+    try {
+      const res = await fetch("{{ url_for('tickets.update_status', ticket_id=ticket.id) }}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const data = await res.json();
+      if (data.success) {
+        const badge = document.querySelector('.ticket-status-pill');
+        if (badge) {
+          badge.textContent = newStatus;
+          badge.className = `ticket-status-pill status-${newStatus.toLowerCase()}`;
+        }
+        const timeline = document.getElementById('statusTimeline');
+        if (timeline) {
+          const item = document.createElement('div');
+          item.className = 'timeline-item';
+          item.innerHTML = `
+            <div class="timeline-dot"></div>
+            <div class="timeline-content">
+              <span class="timeline-status">${escapeHtml(newStatus)}</span>
+              <span class="timeline-date">Just now</span>
+            </div>
+          `;
+          timeline.prepend(item);
+        }
+        showToast(`Ticket status updated to ${newStatus}!`);
+      } else {
+        showToast(data.error || 'Failed to update status', false);
+      }
+    } catch (err) {
+      statusForm.submit();
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+// 3. AJAX for Assigning Engineer
+const assignForm = document.getElementById('assignForm');
+if (assignForm) {
+  assignForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const select = assignForm.querySelector('select[name="engineer_id"]');
+    const btn = assignForm.querySelector('button[type="submit"]');
+    btn.disabled = true;
+
+    try {
+      const res = await fetch("{{ url_for('tickets.assign_ticket', ticket_id=ticket.id) }}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({ engineer_id: select.value })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || 'Engineer assigned successfully!');
+      } else {
+        showToast(data.error || 'Failed to assign engineer', false);
+      }
+    } catch (err) {
+      assignForm.submit();
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+function toggleModifyForm() {
+  const container = document.getElementById('modifyAIContainer');
+  if (container) {
+    container.style.display = (container.style.display === 'none' || container.style.display === '') ? 'block' : 'none';
+  }
+}
+
+function toggleEscalateModal() {
+  const reason = prompt("Please enter the reason for escalating this ticket to Level 2 Support:", "Requires advanced network routing and firewall inspection");
+  if (reason) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = "{{ url_for('tickets.handle_ai_action', ticket_id=ticket.id) }}";
+    
+    const actionInput = document.createElement('input');
+    actionInput.type = 'hidden';
+    actionInput.name = 'action';
+    actionInput.value = 'ESCALATE';
+    form.appendChild(actionInput);
+
+    const reasonInput = document.createElement('input');
+    reasonInput.type = 'hidden';
+    reasonInput.name = 'escalation_reason';
+    reasonInput.value = reason;
+    form.appendChild(reasonInput);
+
+    document.body.appendChild(form);
+    form.submit();
+  }
+}
+</script>
+{% endblock %}
+

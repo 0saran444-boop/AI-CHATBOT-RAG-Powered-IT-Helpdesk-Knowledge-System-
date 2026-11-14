@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}User Management - IT Helpdesk RAG{% endblock %}
+
+{% block content %}
+<div class="tickets-page-container">
+  <div class="page-header-row">
+    <div>
+      <h2>User Role Management</h2>
+      <p class="subtitle">Assign and maintain Role-Based Access Control (RBAC) permissions</p>
+    </div>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn-secondary">&larr; Back to Admin Console</a>
+  </div>
+
+  <div class="section-card">
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>User ID</th>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Current Role</th>
+            <th>Status</th>
+            <th>Registered</th>
+            <th>Reassign Role</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+            <tr>
+              <td>#{{ u.id }}</td>
+              <td style="font-weight: 600;">{{ u.username }}</td>
+              <td>{{ u.email }}</td>
+              <td>
+                <span class="badge badge-{{ u.role.name|replace(' ', '_') if u.role else 'Default' }}">
+                  {{ u.role.name if u.role else 'None' }}
+                </span>
+              </td>
+              <td>
+                <span style="color: var(--success); font-size: 0.85rem; font-weight: 600;">Active</span>
+              </td>
+              <td style="font-size: 0.85rem; color: var(--text-muted);">{{ u.created_at.strftime('%b %d, %Y') }}</td>
+              <td>
+                <form action="{{ url_for('admin.manage_users') }}" method="POST" style="display: flex; gap: 0.5rem;">
+                  <input type="hidden" name="user_id" value="{{ u.id }}">
+                  <select name="role" class="form-select" style="padding: 0.3rem 0.5rem; font-size: 0.85rem;">
+                    {% for r in roles %}
+                      <option value="{{ r.name }}" {% if u.role and u.role.name == r.name %}selected{% endif %}>
+                        {{ r.name }}
+                      </option>
+                    {% endfor %}
+                  </select>
+                  <button type="submit" class="btn-action">Update</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

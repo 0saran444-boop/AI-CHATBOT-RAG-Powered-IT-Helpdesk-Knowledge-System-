@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}SLA Policy Configuration - IT Helpdesk RAG{% endblock %}
+
+{% block content %}
+<div class="tickets-page-container">
+  <div class="page-header-row">
+    <div>
+      <h2>Service Level Agreement (SLA) Policies</h2>
+      <p class="subtitle">Configure targeted resolution hours for each incident priority level (Section 26)</p>
+    </div>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn-secondary">&larr; Back to Admin Console</a>
+  </div>
+
+  <div class="form-card" style="max-width: 600px; margin: 0 auto;">
+    <form action="{{ url_for('admin.manage_sla') }}" method="POST">
+      {% for p in policies %}
+        <div class="form-group" style="padding-bottom: 1rem; border-bottom: 1px solid var(--card-border); margin-bottom: 1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <label class="form-label" style="margin-bottom: 0;">
+              <span class="priority-badge priority-{{ p.priority|lower }}">{{ p.priority }}</span>
+              Priority SLA Target
+            </label>
+            <span style="font-size: 0.85rem; color: var(--text-muted);">Current: {{ p.resolution_time_hours }} hours</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <input 
+              type="number" 
+              name="hours_{{ p.priority }}" 
+              class="form-input" 
+              value="{{ p.resolution_time_hours }}" 
+              min="1" 
+              max="168"
+              required
+            >
+            <span style="font-size: 0.9rem; font-weight: 600;">Hours to Resolve</span>
+          </div>
+        </div>
+      {% endfor %}
+
+      <button type="submit" class="btn-primary" style="margin-top: 0.5rem;">Save SLA Policy Adjustments</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+

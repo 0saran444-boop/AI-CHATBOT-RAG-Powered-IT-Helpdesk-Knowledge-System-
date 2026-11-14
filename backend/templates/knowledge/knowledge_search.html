@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+
+{% block title %}Semantic Vector Search Test - IT Helpdesk RAG{% endblock %}
+
+{% block content %}
+<div class="tickets-page-container">
+  <div class="page-header-row">
+    <div>
+      <h2>Vector Semantic Retrieval Inspector</h2>
+      <p class="subtitle">Query indexed SOPs and knowledge chunks to test embedding similarity and source citations</p>
+    </div>
+    <a href="{{ url_for('knowledge.index') }}" class="btn-secondary">&larr; Back to Knowledge Base</a>
+  </div>
+
+  <div class="filter-card">
+    <form id="vectorSearchForm" method="GET" action="{{ url_for('knowledge.test_search') }}" style="display: flex; gap: 0.75rem;">
+      <input 
+        type="text" 
+        id="searchQueryInput"
+        name="q" 
+        class="form-input" 
+        placeholder="Enter search query (e.g. 'VPN connected but cannot access internal server', 'printer spooler offline')..." 
+        value="{{ query }}" 
+        required 
+        autofocus
+      >
+      <button type="submit" id="searchSubmitBtn" class="btn-primary" style="width: auto; padding: 0.65rem 1.75rem;">Search Vectors</button>
+    </form>
+  </div>
+
+  <div class="section-card">
+    <div class="section-header">
+      <h3 id="resultsHeader">Search Results {% if query %}for "{{ query }}"{% endif %}</h3>
+      <span class="panel-tag" id="resultsCountTag">{{ results|length }} Chunks Retrieved</span>
+    </div>
+
+    <div id="resultsContainer">
+      {% if results %}
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          {% for r in results %}
+            <div class="source-card" style="padding: 1.25rem;">
+              <div class="source-header" style="font-size: 1rem; margin-bottom: 0.35rem; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <strong>📄 {{ r.document_name }}</strong>
+                  {% if r.document_id %}
+                    <a href="{{ url_for('knowledge.view_document', doc_id=r.document_id) }}" target="_blank" class="btn-action" style="padding: 2px 8px; font-size: 0.8rem; color: #2563eb; display: inline-flex; align-items: center; gap: 0.2rem;" title="View document">
+                      👁️ View
+                    </a>
+                  {% endif %}
+                </div>
+                <span class="source-relevance" style="font-size: 0.85rem;">Cosine Similarity: {{ (r.score * 100)|round(1) }}%</span>
+              </div>
+              <div class="source-meta" style="margin-bottom: 0.75rem;">
+                Location: {{ r.section_title }} &bull; Page: {{ r.page_number }} &bull; Chunk ID: {{ r.chunk_id }}
+              </div>
+              <div style="background: #f8fafc; padding: 0.75rem 1rem; border-radius: var(--radius-sm); border-left: 3px solid var(--primary); font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap;">{{ r.content }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      {% elif query %}
+        <div class="empty-state">
+          <p>No chunks matched your query with high enough confidence. Try alternate technical keywords.</p>
+        </div>
+      {% else %}
+        <div class="empty-state">
+          <p>Type a support query above to test the FAISS vector similarity search.</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+function escapeHtml(text) {
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+  return String(text).replace(/[&<>"']/g, m => map[m]);
+}
+
+const vectorForm = document.getElementById('vectorSearchForm');
+if (vectorForm) {
+  vectorForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = document.getElementById('searchQueryInput');
+    const btn = document.getElementById('searchSubmitBtn');
+    const container = document.getElementById('resultsContainer');
+    const header = document.getElementById('resultsHeader');
+    const countTag = document.getElementById('resultsCountTag');
+    const q = input.value.trim();
+    if (!q) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Searching...';
+    container.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-muted);"><em>Searching FAISS vector embeddings...</em></div>';
+
+    try {
+      const res = await fetch(`{{ url_for('knowledge.test_search') }}?q=${encodeURIComponent(q)}&ajax=1`, {
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+      const data = await res.json();
+      btn.disabled = false;
+      btn.textContent = 'Search Vectors';
+
+      header.textContent = `Search Results for "${q}"`;
+      countTag.textContent = `${data.total} Chunks Retrieved`;
+
+      if (data.results && data.results.length > 0) {
+        let html = '<div style="display: flex; flex-direction: column; gap: 1rem;">';
+        data.results.forEach(r => {
+          const scorePct = Math.round(r.score * 1000) / 10;
+          const viewBtn = r.document_id ? `<a href="/knowledge/${r.document_id}/view" target="_blank" class="btn-action" style="padding: 2px 8px; font-size: 0.8rem; color: #2563eb; display: inline-flex; align-items: center; gap: 0.2rem;" title="View document">👁️ View</a>` : '';
+          html += `
+            <div class="source-card" style="padding: 1.25rem;">
+              <div class="source-header" style="font-size: 1rem; margin-bottom: 0.35rem; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <strong>📄 ${escapeHtml(r.document_name)}</strong>
+                  ${viewBtn}
+                </div>
+                <span class="source-relevance" style="font-size: 0.85rem;">Cosine Similarity: ${scorePct}%</span>
+              </div>
+              <div class="source-meta" style="margin-bottom: 0.75rem;">
+                Location: ${escapeHtml(r.section_title || 'General')} &bull; Page: ${r.page_number || 1} &bull; Chunk ID: ${r.chunk_id || '-'}
+              </div>
+              <div style="background: #f8fafc; padding: 0.75rem 1rem; border-radius: var(--radius-sm); border-left: 3px solid var(--primary); font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(r.content)}</div>
+            </div>
+          `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+      } else {
+        container.innerHTML = `
+          <div class="empty-state">
+            <p>No chunks matched your query with high enough confidence. Try alternate technical keywords.</p>
+          </div>
+        `;
+      }
+    } catch (err) {
+      console.error('AJAX Vector search failed:', err);
+      vectorForm.submit();
+    }
+  });
+}
+</script>
+{% endblock %}
+

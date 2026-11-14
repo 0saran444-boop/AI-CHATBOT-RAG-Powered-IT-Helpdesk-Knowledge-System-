@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}IT Helpdesk RAG{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='2') }}">
+  <style>
+    /* Immediate browser override: disable Edge/IE native password reveal button */
+    input[type="password"]::-ms-reveal,
+    input[type="password"]::-ms-clear,
+    input::-ms-reveal,
+    input::-ms-clear {
+      display: none !important;
+      width: 0 !important;
+      height: 0 !important;
+      pointer-events: none;
+    }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  {% if current_user.is_authenticated %}
+  <header class="app-navbar">
+    <div class="nav-container">
+      <a href="{% if current_user.is_admin %}{{ url_for('admin.dashboard') }}{% else %}{{ url_for('auth.dashboard') }}{% endif %}" class="nav-brand">
+        <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Logo" width="28" height="28">
+        <span>IT Helpdesk RAG</span>
+      </a>
+
+      <nav class="nav-links">
+        {% if current_user.is_admin %}
+          <a href="{{ url_for('admin.dashboard') }}">Dashboard</a>
+          <a href="{{ url_for('chat.index') }}">✨ AI Assistant</a>
+          <a href="{{ url_for('tickets.list_tickets') }}">Tickets</a>
+          <a href="{{ url_for('admin.manage_users') }}">Users</a>
+          <a href="{{ url_for('knowledge.index') }}">Knowledge Base</a>
+          <a href="{{ url_for('admin.manage_sla') }}">SLA</a>
+          <a href="{{ url_for('admin.reports') }}">Reports</a>
+          <a href="{{ url_for('admin.audit_logs') }}">Audit Logs</a>
+        {% elif current_user.role and current_user.role.name == 'Support Agent' %}
+          <a href="{{ url_for('auth.dashboard') }}">Dashboard</a>
+          <a href="{{ url_for('chat.index') }}">✨ AI Assistant</a>
+          <a href="{{ url_for('tickets.list_tickets', view='assigned') }}">Assigned to Me</a>
+          <a href="{{ url_for('tickets.list_tickets') }}">All Tickets</a>
+          <a href="{{ url_for('knowledge.index') }}">Knowledge Base</a>
+        {% elif current_user.is_employee %}
+          <a href="{{ url_for('auth.dashboard') }}">Dashboard</a>
+          <a href="{{ url_for('chat.index') }}">✨ AI Assistant</a>
+          <a href="{{ url_for('tickets.create_ticket') }}" class="btn-nav-primary">+ New Ticket</a>
+          <a href="{{ url_for('tickets.list_tickets') }}">My Tickets</a>
+        {% endif %}
+      </nav>
+
+      <div class="nav-profile">
+        {% if current_user.role and current_user.username|lower == current_user.role.name|lower %}
+          <span class="badge badge-{{ current_user.role.name|replace(' ', '_') }}">
+            {{ current_user.role.name }}
+          </span>
+        {% else %}
+          {% if current_user.role %}
+            <span class="badge badge-{{ current_user.role.name|replace(' ', '_') }}">
+              {{ current_user.role.name }}
+            </span>
+          {% endif %}
+          <span class="profile-username">{{ current_user.username }}</span>
+        {% endif %}
+        <a href="{{ url_for('auth.logout') }}" class="btn-logout">Sign Out</a>
+      </div>
+    </div>
+  </header>
+  {% endif %}
+
+  <main class="main-wrapper">
+    <!-- Flash Messages Container -->
+    <div class="alerts-container">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+              <span>{{ message }}</span>
+              <button type="button" class="alert-close" aria-label="Close">&times;</button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+    </div>
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>
+

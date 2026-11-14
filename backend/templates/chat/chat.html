@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+
+{% block title %}IT Self-Service AI Assistant - IT Helpdesk RAG{% endblock %}
+
+{% block content %}
+<div class="tickets-page-container" style="max-width: 900px; margin: 0 auto;">
+  <div class="page-header-row">
+    <div>
+      <h2>IT Self-Service AI Assistant</h2>
+      <p class="subtitle">Ask technical questions to get instant answers from company SOPs and historical incident resolutions</p>
+    </div>
+    <a href="{{ url_for('tickets.create_ticket') }}" class="btn-primary" style="width: auto;">+ Direct Ticket Submission</a>
+  </div>
+
+  <div class="panel-card" style="padding: 0; display: flex; flex-direction: column; height: 600px; overflow: hidden;">
+    <!-- Chat Messages Window -->
+    <div id="chatMessages" style="flex: 1; padding: 1.5rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; background: #fbfcfe;">
+      <!-- Welcome Message -->
+      <div class="comment-bubble comment-engineer" style="max-width: 80%; align-self: flex-start; background: #ffffff; border: 1px solid var(--card-border);">
+        <div class="comment-meta">
+          <strong>🤖 IT Helpdesk AI</strong> &bull; <span>Instant Assistant</span>
+        </div>
+        <p class="comment-text">
+          Hello <strong>{{ current_user.username }}</strong>! I can assist you with common IT issues like VPN connectivity, network configuration, password resets, and printer spooler problems.
+          <br><br>
+          How can I help you today?
+        </p>
+      </div>
+    </div>
+
+    <!-- Convert to Ticket Callout (Hidden by default, shown after response) -->
+    <div id="ticketPromptBar" style="display: none; padding: 0.75rem 1.5rem; background: var(--ai-purple-light); border-top: 1px solid var(--ai-purple-border); align-items: center; justify-content: space-between;">
+      <span style="font-size: 0.85rem; color: #1e1b4b;">Need further technician assistance?</span>
+      <form id="createTicketForm" action="{{ url_for('tickets.create_ticket') }}" method="GET" style="margin: 0;">
+        <input type="hidden" name="title" id="prefillTitle">
+        <input type="hidden" name="description" id="prefillDesc">
+        <button type="submit" class="btn-primary" style="padding: 0.4rem 1rem; font-size: 0.85rem; width: auto;">Create Ticket From This Question &rarr;</button>
+      </form>
+    </div>
+
+    <!-- Input Bar -->
+    <div style="padding: 1rem 1.5rem; background: #ffffff; border-top: 1px solid var(--card-border);">
+      <form id="chatForm" style="display: flex; gap: 0.75rem;">
+        <input 
+          type="text" 
+          id="chatInput" 
+          class="form-input" 
+          placeholder="e.g. VPN says connected but I cannot access server, or how to restart print spooler..." 
+          required 
+          autocomplete="off"
+        >
+        <button type="submit" id="sendBtn" class="btn-primary" style="width: auto; padding: 0.65rem 1.75rem;">Ask AI</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+const chatForm = document.getElementById('chatForm');
+const chatInput = document.getElementById('chatInput');
+const chatMessages = document.getElementById('chatMessages');
+const sendBtn = document.getElementById('sendBtn');
+const ticketPromptBar = document.getElementById('ticketPromptBar');
+const prefillTitle = document.getElementById('prefillTitle');
+const prefillDesc = document.getElementById('prefillDesc');
+
+chatForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const query = chatInput.value.trim();
+  if (!query) return;
+
+  // Append user bubble
+  appendMessage('user', '{{ current_user.username }}', query);
+  chatInput.value = '';
+  chatInput.disabled = true;
+  sendBtn.disabled = true;
+
+  // Append loading bubble
+  const loadingBubble = appendMessage('bot', '🤖 IT Helpdesk AI', '<em>Searching knowledge base & historical incidents...</em>');
+
+  try {
+    const res = await fetch("{{ url_for('chat.query_bot') }}", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: query })
+    });
+    const data = await res.json();
+    loadingBubble.remove();
+
+    let formattedAnswer = renderMarkdown(data.answer);
+
+    // Build citations HTML if any
+    if (data.sources && data.sources.length > 0) {
+      formattedAnswer += '<div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid #e2e8f0; font-size: 0.825rem;"><strong>Supporting Knowledge Sources:</strong><ul style="margin: 0.25rem 0 0 1.25rem; color: #475569;">';
+      data.sources.forEach(s => {
+        formattedAnswer += `<li><strong>${s.document_name}</strong> (${s.section}) - Match: ${s.relevance}</li>`;
+      });
+      formattedAnswer += '</ul></div>';
+    }
+
+    appendMessage('bot', '🤖 IT Helpdesk AI', formattedAnswer);
+
+    // Show ticket conversion prompt
+    prefillTitle.value = data.suggested_ticket_title;
+    prefillDesc.value = data.suggested_ticket_description;
+    ticketPromptBar.style.display = 'flex';
+
+  } catch (err) {
+    loadingBubble.remove();
+    appendMessage('bot', '🤖 IT Helpdesk AI', '<span style="color: red;">Error communicating with knowledge assistant. Please try again or create a ticket directly.</span>');
+  } finally {
+    chatInput.disabled = false;
+    sendBtn.disabled = false;
+    chatInput.focus();
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+});
+
+function renderMarkdown(text) {
+  if (!text) return '';
+  let html = text;
+  // Escape raw HTML brackets
+  html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  
+  // Bold **text**
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  
+  // Italic *text* or _text_
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  
+  // Inline code `code`
+  html = html.replace(/`(.*?)`/g, '<code style="background: #f1f5f9; color: #0f172a; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.9em;">$1</code>');
+  
+  // Bullet lists (- or * at start of line)
+  html = html.replace(/(?:^|\n)[-*]\s+(.+)/g, '<li style="margin-left: 1.25rem; margin-bottom: 0.25rem;">$1</li>');
+  
+  // Numbered lists (1. 2. etc)
+  html = html.replace(/(?:^|\n)(\d+)\.\s+(.+)/g, '<li style="margin-left: 1.25rem; margin-bottom: 0.25rem;"><strong>$1.</strong> $2</li>');
+  
+  // Newlines to <br>
+  html = html.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
+  
+  return html;
+}
+
+function appendMessage(sender, author, text) {
+  const bubble = document.createElement('div');
+  bubble.className = 'comment-bubble ' + (sender === 'user' ? 'comment-employee' : 'comment-engineer');
+  bubble.style.maxWidth = '85%';
+  bubble.style.alignSelf = sender === 'user' ? 'flex-end' : 'flex-start';
+  bubble.style.background = sender === 'user' ? 'var(--primary-light)' : '#ffffff';
+  bubble.style.border = sender === 'user' ? '1px solid #bfdbfe' : '1px solid var(--card-border)';
+  
+  bubble.innerHTML = `
+    <div class="comment-meta">
+      <strong>${author}</strong> &bull; <span>Just now</span>
+    </div>
+    <div class="comment-text">${text}</div>
+  `;
+  chatMessages.appendChild(bubble);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return bubble;
+}
+</script>
+{% endblock %}
+

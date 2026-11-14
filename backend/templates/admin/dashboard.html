@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Overview - IT Helpdesk RAG{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+  <div class="page-header-row">
+    <div>
+      <h2>IT Manager & System Administration Console</h2>
+      <p class="subtitle">Real-time SLA monitoring, operational throughput, and AI RAG model performance</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+      <a href="{{ url_for('admin.manage_users') }}" class="btn-secondary">User Roles</a>
+      <a href="{{ url_for('admin.manage_sla') }}" class="btn-secondary">SLA Policies</a>
+      <a href="{{ url_for('admin.audit_logs') }}" class="btn-secondary">Audit Trail</a>
+    </div>
+  </div>
+
+  <!-- Operational Metric Cards -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <span class="stat-label">Total Support Tickets</span>
+      <span class="stat-number">{{ total_tickets }}</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Active Open Queue</span>
+      <span class="stat-number" style="color: var(--primary);">{{ open_tickets }}</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Resolved Tickets</span>
+      <span class="stat-number stat-success">{{ resolved_tickets }}</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Critical Incidents</span>
+      <span class="stat-number stat-danger">{{ critical_tickets }}</span>
+    </div>
+  </div>
+
+  <!-- Two Column Layout: SLA Monitoring & AI Performance Analytics -->
+  <div class="workspace-grid" style="margin-top: 1.5rem;">
+    <!-- Left Column: SLA Monitoring (Section 27) -->
+    <div class="panel-card">
+      <div class="panel-header">
+        <h3>SLA Compliance Monitoring</h3>
+        <span class="panel-tag">Real-Time Policies</span>
+      </div>
+      <div class="panel-body">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; text-align: center; margin-bottom: 1.5rem;">
+          <div style="padding: 1rem; background: var(--success-bg); border: 1px solid #a7f3d0; border-radius: var(--radius-md);">
+            <div style="font-size: 1.5rem; font-weight: 700; color: #065f46;">{{ sla_within }}</div>
+            <div style="font-size: 0.8rem; font-weight: 600; color: #065f46; text-transform: uppercase;">Within SLA</div>
+          </div>
+          <div style="padding: 1rem; background: var(--warning-bg); border: 1px solid #fde68a; border-radius: var(--radius-md);">
+            <div style="font-size: 1.5rem; font-weight: 700; color: #92400e;">{{ sla_near_breach }}</div>
+            <div style="font-size: 0.8rem; font-weight: 600; color: #92400e; text-transform: uppercase;">Near Breach (<1h)</div>
+          </div>
+          <div style="padding: 1rem; background: var(--danger-bg); border: 1px solid #fecaca; border-radius: var(--radius-md);">
+            <div style="font-size: 1.5rem; font-weight: 700; color: #991b1b;">{{ sla_breached }}</div>
+            <div style="font-size: 0.8rem; font-weight: 600; color: #991b1b; text-transform: uppercase;">Breached</div>
+          </div>
+        </div>
+
+        <h4 style="font-size: 0.95rem; margin-bottom: 0.75rem;">Incident Distribution by Category</h4>
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+          {% for cat in category_stats %}
+            {% if cat.count > 0 %}
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; padding: 0.4rem 0; border-bottom: 1px solid #f1f5f9;">
+                <span>{{ cat.name }}</span>
+                <span style="font-weight: 700;">{{ cat.count }}</span>
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: AI Performance Analytics (Section 29) -->
+    <div class="panel-card ai-analysis-panel">
+      <div class="panel-header ai-panel-header">
+        <div class="ai-brand-title">
+          <span class="ai-icon">📊</span>
+          <h3>AI Resolution Performance</h3>
+        </div>
+        <span class="ai-confidence-pill">Acceptance Rate: {{ acceptance_rate }}%</span>
+      </div>
+      <div class="panel-body">
+        <div style="margin-bottom: 1.5rem;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-size: 0.9rem;">
+            <span>Engineer Acceptance & Modification Rate</span>
+            <strong>{{ acceptance_rate }}%</strong>
+          </div>
+          <div style="background: #e2e8f0; border-radius: 9999px; height: 10px; overflow: hidden;">
+            <div style="background: var(--success); width: {{ acceptance_rate }}%; height: 100%;"></div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+          <div style="padding: 1rem; background: #fff; border: 1px solid var(--card-border); border-radius: var(--radius-md);">
+            <div style="font-size: 0.8rem; color: var(--text-muted);">AI Suggestions Generated</div>
+            <div style="font-size: 1.4rem; font-weight: 700;">{{ total_suggestions }}</div>
+          </div>
+          <div style="padding: 1rem; background: #fff; border: 1px solid var(--card-border); border-radius: var(--radius-md);">
+            <div style="font-size: 0.8rem; color: #065f46;">Accepted by Engineers</div>
+            <div style="font-size: 1.4rem; font-weight: 700; color: #065f46;">{{ accepted }}</div>
+          </div>
+          <div style="padding: 1rem; background: #fff; border: 1px solid var(--card-border); border-radius: var(--radius-md);">
+            <div style="font-size: 0.8rem; color: #0369a1;">Modified / Refined</div>
+            <div style="font-size: 1.4rem; font-weight: 700; color: #0369a1;">{{ modified }}</div>
+          </div>
+          <div style="padding: 1rem; background: #fff; border: 1px solid var(--card-border); border-radius: var(--radius-md);">
+            <div style="font-size: 0.8rem; color: #991b1b;">Rejected by Engineers</div>
+            <div style="font-size: 1.4rem; font-weight: 700; color: #991b1b;">{{ rejected }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

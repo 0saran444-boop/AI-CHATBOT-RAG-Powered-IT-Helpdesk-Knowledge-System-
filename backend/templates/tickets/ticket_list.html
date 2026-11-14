@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+
+{% block title %}Ticket Queue - IT Helpdesk RAG{% endblock %}
+
+{% block content %}
+<div class="tickets-page-container">
+  <div class="page-header-row">
+    <div>
+      <h2>IT Support Tickets</h2>
+      <p class="subtitle">Search, monitor, and resolve organizational support incidents</p>
+    </div>
+    {% if current_user.is_employee %}
+      <a href="{{ url_for('tickets.create_ticket') }}" class="btn-primary" style="width: auto;">+ Create New Ticket</a>
+    {% endif %}
+  </div>
+
+  <!-- Search & Filter Bar -->
+  <div class="filter-card">
+    <form method="GET" action="{{ url_for('tickets.list_tickets') }}" class="filter-form">
+      <div class="search-input-wrap">
+        <input 
+          type="text" 
+          name="q" 
+          class="form-input" 
+          placeholder="Search by ticket # (TKT-...), title, or keyword..." 
+          value="{{ search_term }}"
+        >
+      </div>
+
+      <select name="status" class="form-select filter-select">
+        <option value="">All Statuses</option>
+        <option value="NEW" {% if selected_status == 'NEW' %}selected{% endif %}>NEW</option>
+        <option value="CLASSIFIED" {% if selected_status == 'CLASSIFIED' %}selected{% endif %}>CLASSIFIED</option>
+        <option value="ASSIGNED" {% if selected_status == 'ASSIGNED' %}selected{% endif %}>ASSIGNED</option>
+        <option value="IN_PROGRESS" {% if selected_status == 'IN_PROGRESS' %}selected{% endif %}>IN_PROGRESS</option>
+        <option value="WAITING_FOR_USER" {% if selected_status == 'WAITING_FOR_USER' %}selected{% endif %}>WAITING_FOR_USER</option>
+        <option value="ESCALATED" {% if selected_status == 'ESCALATED' %}selected{% endif %}>ESCALATED</option>
+        <option value="RESOLVED" {% if selected_status == 'RESOLVED' %}selected{% endif %}>RESOLVED</option>
+        <option value="CLOSED" {% if selected_status == 'CLOSED' %}selected{% endif %}>CLOSED</option>
+      </select>
+
+      <select name="priority" class="form-select filter-select">
+        <option value="">All Priorities</option>
+        <option value="CRITICAL" {% if selected_priority == 'CRITICAL' %}selected{% endif %}>CRITICAL</option>
+        <option value="HIGH" {% if selected_priority == 'HIGH' %}selected{% endif %}>HIGH</option>
+        <option value="MEDIUM" {% if selected_priority == 'MEDIUM' %}selected{% endif %}>MEDIUM</option>
+        <option value="LOW" {% if selected_priority == 'LOW' %}selected{% endif %}>LOW</option>
+      </select>
+
+      <select name="category" class="form-select filter-select">
+        <option value="">All Categories</option>
+        {% for cat in categories %}
+          <option value="{{ cat.id }}" {% if selected_category == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+        {% endfor %}
+      </select>
+
+      <button type="submit" class="btn-primary" style="width: auto; padding: 0.65rem 1.25rem;">Filter</button>
+      <a href="{{ url_for('tickets.list_tickets') }}" class="btn-secondary" style="display: inline-flex; align-items: center;">Reset</a>
+    </form>
+  </div>
+
+  <!-- Tickets Table -->
+  <div class="section-card">
+    {% if tickets %}
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Ticket #</th>
+              <th>Issue Title</th>
+              <th>Category</th>
+              <th>Priority</th>
+              <th>Status</th>
+              <th>Assignee</th>
+              <th>SLA Status</th>
+              <th>Created</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in tickets %}
+              <tr>
+                <td><span class="ticket-badge">{{ t.ticket_number }}</span></td>
+                <td>
+                  <a href="{{ url_for('tickets.view_ticket', ticket_id=t.id) }}" class="ticket-title-link">
+                    {{ t.title }}
+                  </a>
+                </td>
+                <td>
+                  <span class="category-pill">{{ t.category.name if t.category else 'General' }}</span>
+                </td>
+                <td>
+                  <span class="priority-badge priority-{{ t.priority|lower }}">{{ t.priority }}</span>
+                </td>
+                <td>
+                  <span class="status-badge status-{{ t.status|lower }}">{{ t.status }}</span>
+                </td>
+                <td>
+                  <span class="assignee-text">{{ t.assignee.username if t.assignee else 'Unassigned' }}</span>
+                </td>
+                <td>
+                  {% if t.is_resolved %}
+                    <span class="sla-badge sla-met">Met</span>
+                  {% elif t.sla_status == 'BREACHED' %}
+                    <span class="sla-badge sla-breached">Breached</span>
+                  {% elif t.sla_status == 'NEAR_BREACH' %}
+                    <span class="sla-badge sla-warning">Near Breach</span>
+                  {% else %}
+                    <span class="sla-badge sla-normal">{{ t.time_remaining_str }}</span>
+                  {% endif %}
+                </td>
+                <td style="font-size: 0.85rem; color: var(--text-muted);">{{ t.created_at.strftime('%b %d, %H:%M') }}</td>
+                <td>
+                  <a href="{{ url_for('tickets.view_ticket', ticket_id=t.id) }}" class="btn-action">Workspace &rarr;</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <p>No tickets matched your filter criteria.</p>
+        <a href="{{ url_for('tickets.list_tickets') }}" class="view-all-link">Clear filters</a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
