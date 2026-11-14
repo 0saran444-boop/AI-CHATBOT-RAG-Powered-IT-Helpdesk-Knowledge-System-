@@ -338,9 +338,71 @@ def export_csv():
 
 @admin_bp.route('/audit-logs', methods=['GET'])
 def audit_logs():
-    """Audit Logging Viewer (Original older format without changes)."""
-    logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).limit(200).all()
-    return render_template('admin/audit_logs.html', logs=logs)
+    """Audit Logging Viewer with automatic 30-day retention and date-wise filtering."""
+    # 1. Automatic 1-Month Cleanup: Automatically delete audit logs older than 30 days
+    one_month_ago = datetime.utcnow() - timedelta(days=30)
+    purged_count = AuditLog.query.filter(AuditLog.timestamp < one_month_ago).delete(synchronize_session=False)
+    if purged_count > 0:
+        db.session.commit()
+
+    # 2. Filters & date-wise queries
+    filter_type = request.args.get('filter', 'all')
+    date_str = request.args.get('date', '').strip()
+
+    today = datetime.utcnow().date()
+    today_start = datetime.combine(today, datetime.min.time())
+    today_end = datetime.combine(today, datetime.max.time())
+
+    login_actions = ['LOGIN_SUCCESS', 'LOGIN_FAILED', 'LOGIN_BLOCKED_LOCKED', 'ACCOUNT_LOCKED']
+
+    query = AuditLog.query
+
+    if filter_type == 'today_logins':
+        query = query.filter(
+            AuditLog.action.in_(login_actions),
+            AuditLog.timestamp >= today_start,
+            AuditLog.timestamp <= today_end
+        )
+    elif filter_type == 'all_logins':
+        query = query.filter(AuditLog.action.in_(login_actions))
+    
+    if date_str:
+        try:
+            target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            d_start = datetime.combine(target_date, datetime.min.time())
+            d_end = datetime.combine(target_date, datetime.max.time())
+            query = query.filter(AuditLog.timestamp >= d_start, AuditLog.timestamp <= d_end)
+        except ValueError:
+            pass
+
+    logs = query.order_by(AuditLog.timestamp.desc()).limit(200).all()
+
+    # 3. Metrics for stats cards
+    today_logins_count = AuditLog.query.filter(
+        AuditLog.action == 'LOGIN_SUCCESS',
+        AuditLog.timestamp >= today_start,
+        AuditLog.timestamp <= today_end
+    ).count()
+
+    today_failed_count = AuditLog.query.filter(
+        AuditLog.action.in_(['LOGIN_FAILED', 'LOGIN_BLOCKED_LOCKED', 'ACCOUNT_LOCKED']),
+        AuditLog.timestamp >= today_start,
+        AuditLog.timestamp <= today_end
+    ).count()
+
+    total_logs_count = AuditLog.query.count()
+
+    return render_template(
+        'admin/audit_logs.html',
+        logs=logs,
+        filter_type=filter_type,
+        selected_date=date_str,
+        today_logins_count=today_logins_count,
+        today_failed_count=today_failed_count,
+        total_logs_count=total_logs_count,
+        today_date_str=today.strftime('%b %d, %Y'),
+        purged_auto_count=purged_count
+    )
 
 
 @admin_bp.route('/audit-logs/<int:log_id>/delete', methods=['POST'])
