@@ -339,38 +339,19 @@ def update_heading(doc_id: int):
     return redirect(url_for('knowledge.index'))
 
 
-@knowledge_bp.route('/optimize', methods=['POST'])
-@login_required
-def optimize_all():
-    """Optimize entire knowledge base, rebuild FAISS vector index, and clean orphaned embeddings."""
-    if current_user.is_employee:
-        flash("Only Managers and Administrators can optimize the knowledge base.", 'danger')
-        return redirect(url_for('knowledge.index'))
-
-    success = VectorStoreManager.rebuild_index()
-    if success:
-        AuditLog.log("KNOWLEDGE_OPTIMIZED", "KnowledgeBase", 0, current_user.id, "Optimized full vector store and FAISS index")
-        flash("✨ Knowledge base vector store optimized successfully! All documents and embeddings are synced with FAISS.", 'success')
-    else:
-        flash("Failed to optimize vector store.", 'danger')
-    return redirect(url_for('knowledge.index'))
-
-
-@knowledge_bp.route('/<int:doc_id>/optimize', methods=['POST'])
 @knowledge_bp.route('/<int:doc_id>/reprocess', methods=['POST'])
 @login_required
 def reprocess(doc_id: int):
-    """Optimize document embeddings and rebuild FAISS index."""
+    """Reprocess document and rebuild embeddings."""
     if current_user.is_employee:
         flash("Unauthorized.", 'danger')
         return redirect(url_for('knowledge.index'))
 
     success, error = RAGService.ingest_document(doc_id)
     if success:
-        AuditLog.log("DOC_OPTIMIZED", "KnowledgeDocument", doc_id, current_user.id, "Optimized embeddings and FAISS index")
-        flash("✨ Document vector embeddings optimized and FAISS index updated.", 'success')
+        flash("Document reprocessed and vector store updated.", 'success')
     else:
-        flash(f"Optimization failed: {error}", 'danger')
+        flash(f"Processing failed: {error}", 'danger')
     return redirect(url_for('knowledge.index'))
 
 

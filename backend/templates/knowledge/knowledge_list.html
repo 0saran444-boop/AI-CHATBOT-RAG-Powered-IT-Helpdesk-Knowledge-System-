@@ -9,14 +9,7 @@
       <h2>RAG Knowledge Base & Technical Documentation</h2>
       <p class="subtitle">Upload SOPs, IT guides, and manuals with custom headings and full version control</p>
     </div>
-    <div style="display: flex; gap: 0.75rem; align-items: center;">
-      {% if not current_user.is_employee %}
-        <form action="{{ url_for('knowledge.optimize_all') }}" method="POST" style="margin: 0;">
-          <button type="submit" class="btn-primary" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); border: none; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1.15rem; font-weight: 600; box-shadow: 0 1px 3px rgba(5, 150, 105, 0.3);" title="Rebuild and optimize FAISS vector database for maximum search accuracy">
-            ⚡ Optimize Vector Store
-          </button>
-        </form>
-      {% endif %}
+    <div style="display: flex; gap: 0.75rem;">
       <a href="{{ url_for('knowledge.test_search') }}" class="btn-secondary">🔍 Test Vector Search</a>
     </div>
   </div>
@@ -118,7 +111,7 @@
   <!-- Documents Table -->
   <div class="section-card">
     <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
-      <h3>Indexed Knowledge Documents ({{ documents|length }}) &bull; <span style="font-size: 0.85rem; color: #059669; font-weight: 600; background: #ecfdf5; padding: 3px 10px; border-radius: 999px; border: 1px solid #a7f3d0;">⚡ Optimized & AI Ready</span></h3>
+      <h3>Indexed Knowledge Documents ({{ documents|length }})</h3>
     </div>
 
     {% if documents %}
@@ -216,7 +209,7 @@
                   <span style="font-size: 0.75rem;">{{ doc.created_at.strftime('%b %d, %Y') }}</span>
                 </td>
 
-                <!-- 9. Actions Column (Update, History, Edit, Optimize, Delete) -->
+                <!-- 9. Actions Column (Update, History, Edit, Delete) -->
                 <td>
                   <div style="display: flex; gap: 0.3rem; align-items: center; flex-wrap: wrap;">
                     {% if not current_user.is_employee %}
@@ -253,9 +246,6 @@
                         ✏️ Edit
                       </button>
                     {% endif %}
-                    <form action="{{ url_for('knowledge.reprocess', doc_id=doc.id) }}" method="POST" style="margin: 0;">
-                      <button type="submit" class="btn-action" style="color: #047857; background: #ecfdf5; border-color: #a7f3d0; font-weight: 600;" title="Optimize embeddings & FAISS index for this document">⚡ Optimize</button>
-                    </form>
                     {% if not current_user.is_employee %}
                       <form action="{{ url_for('knowledge.delete', doc_id=doc.id) }}" method="POST" onsubmit="return confirm('Delete this document and remove from FAISS vector index?');" style="margin: 0;">
                         <button type="submit" class="btn-action" style="color: var(--danger);">Delete</button>
@@ -492,7 +482,7 @@ async function openVersionsModal(docId) {
               📝 ${escapeHtml(v.change_summary)}
             </div>
             <div style="font-size: 0.775rem; color: #64748b;">
-              File: <code>${escapeHtml(v.filename)}</code> &bull; Size: ${escapeHtml(v.file_size)} &bull; <span style="color: #059669; font-weight: 600;">⚡ Optimized</span>
+              File: <code>${escapeHtml(v.filename)}</code> &bull; Size: ${escapeHtml(v.file_size)}
             </div>
           </div>
 
