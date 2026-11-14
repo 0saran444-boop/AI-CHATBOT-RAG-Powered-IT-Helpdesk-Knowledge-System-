@@ -234,9 +234,24 @@
           <option value="Miscellaneous">Miscellaneous</option>
         </select>
       </div>
-      <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
-        <button type="button" onclick="closeEditModal()" class="btn-secondary" style="width: auto;">Cancel</button>
-        <button type="submit" class="btn-primary" style="width: auto;">Save Heading</button>
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 1.25rem; margin-top: 0.5rem;">
+        {% if not current_user.is_employee %}
+          <button 
+            type="button" 
+            onclick="deleteDocumentFromEditModal()" 
+            class="btn-action" 
+            style="color: var(--danger); background: #fef2f2; border: 1px solid #fecaca; font-weight: 600; font-size: 0.8rem; padding: 0.45rem 0.85rem; border-radius: 6px; display: inline-flex; align-items: center; gap: 0.35rem;"
+            title="Permanently delete this document from knowledge base and FAISS"
+          >
+            🗑️ Delete Document
+          </button>
+        {% else %}
+          <div></div>
+        {% endif %}
+        <div style="display: flex; gap: 0.75rem;">
+          <button type="button" onclick="closeEditModal()" class="btn-secondary" style="width: auto;">Cancel</button>
+          <button type="submit" class="btn-primary" style="width: auto;">Save Heading</button>
+        </div>
       </div>
     </form>
   </div>
@@ -326,7 +341,10 @@ function closeVersionsModal() {
   document.getElementById('versionsModal').style.display = 'none';
 }
 
+let currentEditDocId = null;
+
 function openEditModal(docId, currentTitle, currentCategory) {
+  currentEditDocId = docId;
   const modal = document.getElementById('editHeadingModal');
   const form = document.getElementById('editHeadingForm');
   const titleInput = document.getElementById('editModalTitle');
@@ -336,6 +354,18 @@ function openEditModal(docId, currentTitle, currentCategory) {
   catInput.value = currentCategory;
   modal.style.display = 'flex';
   titleInput.focus();
+}
+
+function deleteDocumentFromEditModal() {
+  if (!currentEditDocId) return;
+  const title = document.getElementById('editModalTitle').value || 'this document';
+  if (confirm(`Are you sure you want to permanently delete "${title}" and remove it from the knowledge base and FAISS?`)) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/knowledge/${currentEditDocId}/delete`;
+    document.body.appendChild(form);
+    form.submit();
+  }
 }
 
 function closeEditModal() {
