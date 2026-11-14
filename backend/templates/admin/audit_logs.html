@@ -4,40 +4,231 @@
 
 {% block content %}
 <div class="tickets-page-container">
-  <div class="page-header-row">
+  <!-- Page Header -->
+  <div class="page-header-row" style="margin-bottom: 1.5rem; align-items: flex-start;">
     <div>
-      <h2>Security & Operational Audit Trail</h2>
-      <p class="subtitle">Complete audit record of user logins, ticket actions, RAG generations, and escalations (Section 30)</p>
+      <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.35rem;">
+        <span class="category-pill" style="background: #e0f2fe; color: #0369a1; font-weight: 600;">
+          ⚡ 1-Month Auto-Retention: Logs &gt;30 days automatically purged
+        </span>
+        {% if purged_auto_count and purged_auto_count > 0 %}
+          <span class="category-pill" style="background: #f0fdf4; color: #166534; font-weight: 600;">
+            ✓ Auto-purged {{ purged_auto_count }} expired logs
+          </span>
+        {% endif %}
+      </div>
+      <h2>Security &amp; Operational Audit Trail</h2>
+      <p class="subtitle">Complete audit record of user logins, role changes, tickets, and RAG knowledge operations</p>
     </div>
-    <a href="{{ url_for('admin.dashboard') }}" class="btn-secondary">&larr; Back to Admin Console</a>
+    
+    <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+      <a href="{{ url_for('admin.dashboard') }}" class="btn-secondary">&larr; Back to Admin Console</a>
+      <!-- Bulk Purge Menu -->
+      <form action="{{ url_for('admin.purge_audit_logs') }}" method="POST" style="margin: 0;" onsubmit="return confirm('Purge audit logs older than 30 days?');">
+        <input type="hidden" name="purge_mode" value="older_than_30_days">
+        <button type="submit" class="btn-secondary" style="color: #b45309; border-color: #fde68a; background: #fffbeb; font-size: 0.8rem; padding: 0.45rem 0.85rem;" title="Manually purge logs older than 30 days">
+          🗑️ Purge &gt;30 Days
+        </button>
+      </form>
+    </div>
   </div>
 
+  <!-- Metric Stats Row -->
+  <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+    <!-- Today's Successful Logins -->
+    <a href="{{ url_for('admin.audit_logs', filter='today_logins') }}" style="text-decoration: none; color: inherit;">
+      <div class="stat-card" style="background: #ffffff; border-left: 4px solid #10b981; padding: 1rem 1.25rem;">
+        <span class="stat-label">Today's Logins</span>
+        <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-top: 0.25rem;">
+          <span class="stat-number stat-success">{{ today_logins_count }}</span>
+          <span style="font-size: 0.8rem; color: #64748b;">successful today</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- Today's Failed Logins -->
+    <a href="{{ url_for('admin.audit_logs', filter='today_logins') }}" style="text-decoration: none; color: inherit;">
+      <div class="stat-card" style="background: #ffffff; border-left: 4px solid #ef4444; padding: 1rem 1.25rem;">
+        <span class="stat-label">Today's Failed Attempts</span>
+        <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-top: 0.25rem;">
+          <span class="stat-number stat-danger">{{ today_failed_count }}</span>
+          <span style="font-size: 0.8rem; color: #64748b;">blocked / invalid</span>
+        </div>
+      </div>
+    </a>
+
+    <!-- Total Active Logs Stored -->
+    <div class="stat-card" style="background: #ffffff; border-left: 4px solid #3b82f6; padding: 1rem 1.25rem;">
+      <span class="stat-label">Active Audit Records</span>
+      <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-top: 0.25rem;">
+        <span class="stat-number" style="color: #1e3a8a;">{{ total_logs_count }}</span>
+        <span style="font-size: 0.8rem; color: #64748b;">retained &lt; 30 days</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter & Date-Wise Navigation Bar -->
+  <div class="panel-card" style="background: #ffffff; border: 1px solid var(--card-border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <!-- Quick Filter Tabs -->
+    <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+      <a 
+        href="{{ url_for('admin.audit_logs', filter='today_logins') }}" 
+        class="btn-action" 
+        style="padding: 0.45rem 0.9rem; font-size: 0.825rem; font-weight: 600; border-radius: 6px; text-decoration: none; {% if filter_type == 'today_logins' %}background: #10b981; color: #ffffff; border-color: #10b981;{% else %}background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;{% endif %}"
+      >
+        🌟 Today's Logins ({{ today_date_str }})
+      </a>
+
+      <a 
+        href="{{ url_for('admin.audit_logs', filter='all_logins') }}" 
+        class="btn-action" 
+        style="padding: 0.45rem 0.9rem; font-size: 0.825rem; font-weight: 600; border-radius: 6px; text-decoration: none; {% if filter_type == 'all_logins' %}background: #3b82f6; color: #ffffff; border-color: #3b82f6;{% else %}background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;{% endif %}"
+      >
+        🔑 All Sign-In Logs
+      </a>
+
+      <a 
+        href="{{ url_for('admin.audit_logs') }}" 
+        class="btn-action" 
+        style="padding: 0.45rem 0.9rem; font-size: 0.825rem; font-weight: 600; border-radius: 6px; text-decoration: none; {% if filter_type == 'all' and not selected_date %}background: #475569; color: #ffffff; border-color: #475569;{% else %}background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;{% endif %}"
+      >
+        📋 All System Activity
+      </a>
+    </div>
+
+    <!-- Date-Wise Filter Form -->
+    <form action="{{ url_for('admin.audit_logs') }}" method="GET" style="margin: 0; display: flex; gap: 0.5rem; align-items: center;">
+      <input type="hidden" name="filter" value="{{ filter_type }}">
+      <label style="font-size: 0.825rem; font-weight: 600; color: #334155; white-space: nowrap;">
+        📅 Date-wise:
+      </label>
+      <input 
+        type="date" 
+        name="date" 
+        value="{{ selected_date }}" 
+        class="form-input" 
+        style="padding: 0.35rem 0.6rem; font-size: 0.825rem; width: auto;"
+        onchange="this.form.submit()"
+      >
+      {% if selected_date %}
+        <a href="{{ url_for('admin.audit_logs', filter=filter_type) }}" class="btn-action" style="padding: 0.35rem 0.6rem; font-size: 0.775rem; text-decoration: none; color: #64748b;">
+          ✕ Clear Date
+        </a>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- Audit Logs Table with Delete Option -->
   <div class="section-card">
+    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h3 style="margin: 0;">
+        {% if filter_type == 'today_logins' %}
+          🌟 Today's Login Activity ({{ logs|length }} Records)
+        {% elif filter_type == 'all_logins' %}
+          🔑 User Authentication Log History ({{ logs|length }} Records)
+        {% elif selected_date %}
+          📅 Audit Logs for {{ selected_date }} ({{ logs|length }} Records)
+        {% else %}
+          System Audit Trail (Showing last {{ logs|length }} of {{ total_logs_count }} active logs)
+        {% endif %}
+      </h3>
+
+      {% if logs %}
+        <form action="{{ url_for('admin.purge_audit_logs') }}" method="POST" style="margin: 0;" onsubmit="return confirm('Clear all audit logs matching this view? This cannot be undone.');">
+          <input type="hidden" name="purge_mode" value="{% if filter_type == 'today_logins' %}today_logins{% else %}all{% endif %}">
+          <button type="submit" class="btn-action" style="color: var(--danger); font-size: 0.75rem; padding: 0.3rem 0.65rem; border-radius: 4px;" title="Clear all logs in this view">
+            🗑️ Clear {% if filter_type == 'today_logins' %}Today's Logins{% else %}All Logs{% endif %}
+          </button>
+        </form>
+      {% endif %}
+    </div>
+
     <div class="table-responsive">
       <table class="data-table">
         <thead>
           <tr>
-            <th>Timestamp</th>
+            <th style="white-space: nowrap;">Timestamp / Date</th>
             <th>User</th>
             <th>Action</th>
             <th>Entity Type</th>
             <th>Entity ID</th>
             <th>Details</th>
+            <th style="text-align: right; white-space: nowrap;">Delete</th>
           </tr>
         </thead>
         <tbody>
           {% for log in logs %}
             <tr>
-              <td style="font-size: 0.85rem; color: var(--text-muted); white-space: nowrap;">{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
-              <td style="font-weight: 600;">{{ log.user.username if log.user else 'System / AI' }}</td>
-              <td><span class="category-pill">{{ log.action }}</span></td>
-              <td>{{ log.entity_type }}</td>
-              <td>#{{ log.entity_id or '-' }}</td>
-              <td style="font-size: 0.9rem; line-height: 1.4;">{{ log.details or '-' }}</td>
+              <!-- 1. Timestamp / Date -->
+              <td style="font-size: 0.825rem; color: var(--text-muted); white-space: nowrap;">
+                <strong style="color: #0f172a;">{{ log.timestamp.strftime('%Y-%m-%d') }}</strong><br>
+                <span style="font-size: 0.75rem; color: #64748b;">{{ log.timestamp.strftime('%H:%M:%S') }}</span>
+              </td>
+
+              <!-- 2. User -->
+              <td style="font-weight: 600; white-space: nowrap;">
+                {% if log.user %}
+                  <span style="color: #1e3a8a;">{{ log.user.username }}</span>
+                {% else %}
+                  <span style="color: #64748b; font-style: italic;">System / Automated</span>
+                {% endif %}
+              </td>
+
+              <!-- 3. Action with Color Coding -->
+              <td style="white-space: nowrap;">
+                {% if 'LOGIN_SUCCESS' in log.action %}
+                  <span class="category-pill" style="background: #ecfdf5; color: #047857; font-weight: 700; border: 1px solid #a7f3d0;">
+                    ✓ {{ log.action }}
+                  </span>
+                {% elif 'LOGIN_FAILED' in log.action or 'LOCKED' in log.action %}
+                  <span class="category-pill" style="background: #fef2f2; color: #b91c1c; font-weight: 700; border: 1px solid #fecaca;">
+                    ⚠ {{ log.action }}
+                  </span>
+                {% elif 'ROLE' in log.action or 'STATUS' in log.action %}
+                  <span class="category-pill" style="background: #ede9fe; color: #6d28d9; font-weight: 700;">
+                    👤 {{ log.action }}
+                  </span>
+                {% elif 'DOC' in log.action %}
+                  <span class="category-pill" style="background: #f0fdf4; color: #0f766e; font-weight: 700;">
+                    📄 {{ log.action }}
+                  </span>
+                {% else %}
+                  <span class="category-pill">{{ log.action }}</span>
+                {% endif %}
+              </td>
+
+              <!-- 4. Entity Type -->
+              <td style="white-space: nowrap; font-size: 0.85rem;">{{ log.entity_type }}</td>
+
+              <!-- 5. Entity ID -->
+              <td style="white-space: nowrap; font-size: 0.85rem;">
+                {% if log.entity_id %}<code>#{{ log.entity_id }}</code>{% else %}-{% endif %}
+              </td>
+
+              <!-- 6. Details -->
+              <td style="font-size: 0.85rem; line-height: 1.45; color: #334155;">
+                {{ log.details or '-' }}
+              </td>
+
+              <!-- 7. Delete Option (Per Row) -->
+              <td style="text-align: right; white-space: nowrap;">
+                <form action="{{ url_for('admin.delete_audit_log', log_id=log.id) }}" method="POST" onsubmit="return confirm('Delete this audit log entry (#{{ log.id }})?');" style="margin: 0; display: inline;">
+                  <button 
+                    type="submit" 
+                    class="btn-action" 
+                    style="color: var(--danger); background: #fef2f2; border: 1px solid #fecaca; font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 4px;"
+                    title="Delete this audit log"
+                  >
+                    🗑️ Delete
+                  </button>
+                </form>
+              </td>
             </tr>
           {% else %}
             <tr>
-              <td colspan="6" style="text-align: center; color: var(--text-muted);">No audit events recorded yet.</td>
+              <td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--text-muted);">
+                <em>No audit events found for this filter or date.</em>
+              </td>
             </tr>
           {% endfor %}
         </tbody>
@@ -46,4 +237,3 @@
   </div>
 </div>
 {% endblock %}
-

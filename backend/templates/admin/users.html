@@ -3,11 +3,98 @@
 {% block title %}User Management - IT Helpdesk RAG{% endblock %}
 
 {% block content %}
+<style>
+  /* Modern Interactive ON / OFF Toggle Switch */
+  .status-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0.75rem 0.3rem 0.45rem;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 700;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  }
+  .status-toggle-btn.is-on {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+    color: #065f46;
+  }
+  .status-toggle-btn.is-on:hover {
+    background: #d1fae5;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+    transform: translateY(-1px);
+  }
+  .status-toggle-btn.is-off {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b;
+  }
+  .status-toggle-btn.is-off:hover {
+    background: #fee2e2;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+    transform: translateY(-1px);
+  }
+  .switch-track {
+    width: 32px;
+    height: 18px;
+    border-radius: 999px;
+    position: relative;
+    display: inline-block;
+    transition: background-color 0.25s ease;
+    flex-shrink: 0;
+  }
+  .is-on .switch-track {
+    background-color: #10b981;
+  }
+  .is-off .switch-track {
+    background-color: #cbd5e1;
+  }
+  .switch-thumb {
+    width: 14px;
+    height: 14px;
+    background-color: #ffffff;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  }
+  .is-on .switch-thumb {
+    transform: translateX(16px);
+  }
+  .is-off .switch-thumb {
+    transform: translateX(2px);
+  }
+  .status-locked-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 999px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #166534;
+    font-size: 0.775rem;
+    font-weight: 700;
+  }
+  .status-locked-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #16a34a;
+  }
+</style>
+
 <div class="tickets-page-container">
   <div class="page-header-row">
     <div>
-      <h2>User Role Management</h2>
-      <p class="subtitle">Assign and maintain Role-Based Access Control (RBAC) permissions</p>
+      <h2>User Role &amp; Status Management</h2>
+      <p class="subtitle">Assign RBAC permissions and toggle user active / inactive status</p>
     </div>
     <a href="{{ url_for('admin.dashboard') }}" class="btn-secondary">&larr; Back to Admin Console</a>
   </div>
@@ -21,7 +108,7 @@
             <th>Username</th>
             <th>Email</th>
             <th>Current Role</th>
-            <th>Status</th>
+            <th style="text-align: center; white-space: nowrap;">Status (ON / OFF)</th>
             <th>Registered</th>
             <th>Reassign Role</th>
           </tr>
@@ -30,19 +117,49 @@
           {% for u in users %}
             <tr>
               <td>#{{ u.id }}</td>
-              <td style="font-weight: 600;">{{ u.username }}</td>
+              <td style="font-weight: 600;">
+                {{ u.username }}
+                {% if u.id == current_user.id %}
+                  <span style="font-size: 0.7rem; color: #2563eb; background: #eff6ff; padding: 1px 6px; border-radius: 4px; margin-left: 4px;">You</span>
+                {% endif %}
+              </td>
               <td>{{ u.email }}</td>
               <td>
                 <span class="badge badge-{{ u.role.name|replace(' ', '_') if u.role else 'Default' }}">
                   {{ u.role.name if u.role else 'None' }}
                 </span>
               </td>
-              <td>
-                <span style="color: var(--success); font-size: 0.85rem; font-weight: 600;">Active</span>
+              <!-- Interactive Active / Inactive ON-OFF Toggle Switch Button -->
+              <td style="text-align: center; white-space: nowrap;">
+                {% if u.id == current_user.id %}
+                  <span class="status-locked-pill" title="Your administrative account is permanently ON">
+                    <span class="status-locked-dot"></span> ON (Active)
+                  </span>
+                {% else %}
+                  <form action="{{ url_for('admin.toggle_user_status', user_id=u.id) }}" method="POST" style="margin: 0; display: inline-block;">
+                    <button 
+                      type="submit" 
+                      class="status-toggle-btn {% if u.is_active %}is-on{% else %}is-off{% endif %}"
+                      title="Click to toggle status: {% if u.is_active %}Turn OFF (Deactivate user){% else %}Turn ON (Activate user){% endif %}"
+                      onclick="return confirm('Change status for {{ u.username }} to {% if u.is_active %}INACTIVE (Turn OFF){% else %}ACTIVE (Turn ON){% endif %}?');"
+                    >
+                      <span class="switch-track">
+                        <span class="switch-thumb"></span>
+                      </span>
+                      <span>
+                        {% if u.is_active %}
+                          <strong style="color: #047857;">ON</strong> &bull; Active
+                        {% else %}
+                          <strong style="color: #b91c1c;">OFF</strong> &bull; Inactive
+                        {% endif %}
+                      </span>
+                    </button>
+                  </form>
+                {% endif %}
               </td>
-              <td style="font-size: 0.85rem; color: var(--text-muted);">{{ u.created_at.strftime('%b %d, %Y') }}</td>
+              <td style="font-size: 0.85rem; color: var(--text-muted); white-space: nowrap;">{{ u.created_at.strftime('%b %d, %Y') }}</td>
               <td>
-                <form action="{{ url_for('admin.manage_users') }}" method="POST" style="display: flex; gap: 0.5rem;">
+                <form action="{{ url_for('admin.manage_users') }}" method="POST" style="display: flex; gap: 0.5rem; align-items: center;">
                   <input type="hidden" name="user_id" value="{{ u.id }}">
                   <select name="role" class="form-select" style="padding: 0.3rem 0.5rem; font-size: 0.85rem;">
                     {% for r in roles %}

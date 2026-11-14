@@ -90,6 +90,23 @@ def manage_users():
     return render_template('admin/users.html', users=users, roles=roles)
 
 
+@admin_bp.route('/users/<int:user_id>/toggle-status', methods=['POST'])
+def toggle_user_status(user_id: int):
+    """Toggle user active / inactive status (ON / OFF switch)."""
+    if user_id == current_user.id:
+        flash("You cannot deactivate your own administrative account.", 'warning')
+        return redirect(url_for('admin.manage_users'))
+
+    user = User.query.get_or_404(user_id)
+    user.is_active = not bool(user.is_active)
+    db.session.commit()
+
+    status_str = "ACTIVE (ON)" if user.is_active else "INACTIVE (OFF)"
+    AuditLog.log("USER_STATUS_TOGGLED", "User", user.id, current_user.id, f"Toggled {user.username} status to {status_str}")
+    flash(f"User '{user.username}' status changed to {status_str}.", 'success' if user.is_active else 'info')
+    return redirect(url_for('admin.manage_users'))
+
+
 @admin_bp.route('/sla', methods=['GET', 'POST'])
 def manage_sla():
     """SLA Policy Configuration."""
@@ -297,7 +314,111 @@ def export_csv():
 
 @admin_bp.route('/audit-logs', methods=['GET'])
 def audit_logs():
-    """Audit Logging Viewer."""
-    logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).limit(100).all()
-    return render_template('admin/audit_logs.html', logs=logs)
+    """Audit Logging Viewer with automatic 30-day retention and date-wise filtering."""
+    # 1. Automatic 1-Month Cleanup: Automatically delete audit logs older than 30 days
+    one_month_ago = datetime.utcnow() - timedelta(days=30)
+    purged_count = AuditLog.query.filter(AuditLog.timestamp < one_month_ago).delete(synchronize_session=False)
+    if purged_count > 0:
+        db.session.commit()
+
+    # 2. Filters & date-wise queries
+    filter_type = request.args.get('filter', 'all')
+    date_str = request.args.get('date', '').strip()
+
+    today = datetime.utcnow().date()
+    today_start = datetime.combine(today, datetime.min.time())
+    today_end = datetime.combine(today, datetime.max.time())
+
+    login_actions = ['LOGIN_SUCCESS', 'LOGIN_FAILED', 'LOGIN_BLOCKED_LOCKED', 'ACCOUNT_LOCKED']
+
+    query = AuditLog.query
+
+    if filter_type == 'today_logins':
+        query = query.filter(
+            AuditLog.action.in_(login_actions),
+            AuditLog.timestamp >= today_start,
+            AuditLog.timestamp <= today_end
+        )
+    elif filter_type == 'all_logins':
+        query = query.filter(AuditLog.action.in_(login_actions))
+    
+    if date_str:
+        try:
+            target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            d_start = datetime.combine(target_date, datetime.min.time())
+            d_end = datetime.combine(target_date, datetime.max.time())
+            query = query.filter(AuditLog.timestamp >= d_start, AuditLog.timestamp <= d_end)
+        except ValueError:
+            pass
+
+    logs = query.order_by(AuditLog.timestamp.desc()).limit(200).all()
+
+    # 3. Metrics for stats cards
+    today_logins_count = AuditLog.query.filter(
+        AuditLog.action == 'LOGIN_SUCCESS',
+        AuditLog.timestamp >= today_start,
+        AuditLog.timestamp <= today_end
+    ).count()
+
+    today_failed_count = AuditLog.query.filter(
+        AuditLog.action.in_(['LOGIN_FAILED', 'LOGIN_BLOCKED_LOCKED', 'ACCOUNT_LOCKED']),
+        AuditLog.timestamp >= today_start,
+        AuditLog.timestamp <= today_end
+    ).count()
+
+    total_logs_count = AuditLog.query.count()
+
+    return render_template(
+        'admin/audit_logs.html',
+        logs=logs,
+        filter_type=filter_type,
+        selected_date=date_str,
+        today_logins_count=today_logins_count,
+        today_failed_count=today_failed_count,
+        total_logs_count=total_logs_count,
+        today_date_str=today.strftime('%Y-%m-%d'),
+        purged_auto_count=purged_count
+    )
+
+
+@admin_bp.route('/audit-logs/<int:log_id>/delete', methods=['POST'])
+def delete_audit_log(log_id: int):
+    """Delete a single audit log entry."""
+    log = AuditLog.query.get_or_404(log_id)
+    db.session.delete(log)
+    db.session.commit()
+    flash(f"Audit log #{log_id} deleted successfully.", 'info')
+    return redirect(request.referrer or url_for('admin.audit_logs'))
+
+
+@admin_bp.route('/audit-logs/purge', methods=['POST'])
+def purge_audit_logs():
+    """Manual purge options: older than 30 days, today's logs, or all logs."""
+    purge_mode = request.form.get('purge_mode', 'older_than_30_days')
+    today = datetime.utcnow().date()
+    today_start = datetime.combine(today, datetime.min.time())
+    today_end = datetime.combine(today, datetime.max.time())
+
+    if purge_mode == 'older_than_30_days':
+        cutoff = datetime.utcnow() - timedelta(days=30)
+        deleted = AuditLog.query.filter(AuditLog.timestamp < cutoff).delete(synchronize_session=False)
+        msg = f"Purged {deleted} audit logs older than 30 days."
+    elif purge_mode == 'today_logins':
+        login_actions = ['LOGIN_SUCCESS', 'LOGIN_FAILED', 'LOGIN_BLOCKED_LOCKED', 'ACCOUNT_LOCKED']
+        deleted = AuditLog.query.filter(
+            AuditLog.action.in_(login_actions),
+            AuditLog.timestamp >= today_start,
+            AuditLog.timestamp <= today_end
+        ).delete(synchronize_session=False)
+        msg = f"Deleted {deleted} login logs from today."
+    elif purge_mode == 'all':
+        deleted = AuditLog.query.delete()
+        msg = f"Cleared all {deleted} audit logs."
+    else:
+        deleted = 0
+        msg = "No logs deleted."
+
+    db.session.commit()
+    flash(msg, 'success')
+    return redirect(url_for('admin.audit_logs'))
 
