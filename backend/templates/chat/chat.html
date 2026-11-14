@@ -5,11 +5,11 @@
 {% block content %}
 <style>
   /* =========================================================================
-     ADVANCED CHATBOT UI: Modern Glassmorphic, Conversational AI Styling
+     ADVANCED CHATBOT UI: Conversational AI with Gemini 3.5 Engine
      ========================================================================= */
 
   .chatbot-wrapper {
-    max-width: 980px;
+    max-width: 1000px;
     margin: 0 auto;
     animation: fadeInChat 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
@@ -26,7 +26,7 @@
     box-shadow: 0 20px 30px -10px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(226, 232, 240, 0.6);
     display: flex;
     flex-direction: column;
-    height: 720px;
+    height: 750px;
     overflow: hidden;
     position: relative;
   }
@@ -131,7 +131,7 @@
   .message-row {
     display: flex;
     gap: 0.75rem;
-    max-width: 88%;
+    max-width: 90%;
     animation: popInMessage 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   }
   @keyframes popInMessage {
@@ -174,57 +174,60 @@
 
   /* Bubbles */
   .chat-bubble {
-    padding: 1.1rem 1.35rem;
+    padding: 1.15rem 1.4rem;
     border-radius: 18px;
     font-size: 0.925rem;
     line-height: 1.6;
-    position: relative;
+    word-break: break-word;
   }
   .chat-bubble-bot {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-top-left-radius: 4px;
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
     color: #1e293b;
+    box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05);
   }
   .chat-bubble-user {
-    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
-    border-top-right-radius: 4px;
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
     color: #ffffff;
-    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+    border-top-right-radius: 4px;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.22);
   }
 
+  /* Metadata Labels */
   .bubble-meta {
     font-size: 0.75rem;
-    font-weight: 700;
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.45rem;
     display: flex;
     align-items: center;
-    gap: 0.45rem;
+    gap: 0.4rem;
   }
   .bubble-meta-bot {
-    color: #4338ca;
+    color: #6366f1;
+    font-weight: 700;
   }
   .bubble-meta-user {
-    color: rgba(255, 255, 255, 0.85);
+    color: #bfdbfe;
+    font-weight: 600;
+    justify-content: flex-end;
   }
 
-  /* Knowledge Source Citation Card */
+  /* Citations Section */
   .citation-container {
-    margin-top: 1.15rem;
-    padding-top: 0.85rem;
-    border-top: 1px solid #e2e8f0;
+    margin-top: 0.85rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #f1f5f9;
   }
   .citation-title {
-    font-size: 0.775rem;
-    font-weight: 800;
-    color: #475569;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.4rem;
     display: flex;
     align-items: center;
     gap: 0.35rem;
-    margin-bottom: 0.5rem;
   }
   .citation-chip {
     background: #f8fafc;
@@ -241,6 +244,111 @@
   .citation-chip:hover {
     background: #f1f5f9;
     border-color: #cbd5e1;
+  }
+
+  /* Interactive Follow-Up Suggestions */
+  .followup-container {
+    margin-top: 1rem;
+    padding-top: 0.85rem;
+    border-top: 1px dashed #e2e8f0;
+  }
+  .followup-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #6366f1;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .followup-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+  .followup-chip {
+    background: #ffffff;
+    border: 1.5px solid #c7d2fe;
+    color: #4338ca;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.775rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    text-align: left;
+    box-shadow: 0 1px 2px rgba(99, 102, 241, 0.08);
+  }
+  .followup-chip:hover {
+    background: #eef2ff;
+    border-color: #818cf8;
+    color: #312e81;
+    transform: translateY(-1.5px);
+    box-shadow: 0 4px 8px rgba(99, 102, 241, 0.18);
+  }
+
+  /* Terminal & Code Block */
+  .code-terminal-box {
+    background: #0f172a;
+    border-radius: 10px;
+    margin: 0.85rem 0;
+    overflow: hidden;
+    border: 1px solid #1e293b;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  }
+  .code-terminal-header {
+    background: #1e293b;
+    padding: 0.4rem 0.85rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.725rem;
+    color: #94a3b8;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .code-terminal-copy-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 0.725rem;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    transition: all 0.15s;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .code-terminal-copy-btn:hover {
+    color: #ffffff;
+    background: rgba(255,255,255,0.12);
+  }
+  .code-terminal-body {
+    padding: 0.85rem 1rem;
+    color: #38bdf8;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.85rem;
+    overflow-x: auto;
+    line-height: 1.5;
+    margin: 0;
+    white-space: pre;
+  }
+
+  /* Callout Alerts */
+  .chat-alert-box {
+    border-left: 4px solid #3b82f6;
+    background: #eff6ff;
+    border-radius: 0 8px 8px 0;
+    padding: 0.65rem 0.95rem;
+    margin: 0.75rem 0;
+    font-size: 0.85rem;
+    color: #1e3a8a;
+    line-height: 1.5;
   }
 
   /* Copy Answer Button */
@@ -348,28 +456,26 @@
     background: #f8fafc;
     border: 1.5px solid #cbd5e1;
     border-radius: 14px;
-    padding: 0.35rem 0.5rem 0.35rem 1.1rem;
+    padding: 0.35rem 0.5rem 0.35rem 1rem;
     transition: all 0.2s ease;
     box-shadow: 0 1px 3px rgba(0,0,0,0.03);
   }
   .input-capsule-wrapper:focus-within {
     border-color: #3b82f6;
     background: #ffffff;
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15), 0 2px 6px rgba(0,0,0,0.05);
   }
   .modern-chat-input {
     flex: 1;
     border: none;
+    outline: none;
     background: transparent;
-    padding: 0.45rem 0;
     font-size: 0.925rem;
     color: #0f172a;
-    outline: none;
-    font-weight: 500;
+    padding: 0.4rem 0.5rem;
   }
   .modern-chat-input::placeholder {
     color: #94a3b8;
-    font-weight: normal;
   }
   .btn-send-gradient {
     background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
@@ -404,7 +510,7 @@
         IT Self-Service AI Assistant
       </h2>
       <p class="subtitle" style="margin: 0; color: #64748b; font-size: 0.9rem;">
-        Instant technical troubleshooting backed by verified company SOPs and historical incident records
+        Instant technical troubleshooting powered by Google Gemini 3.5 with verified SOP grounding
       </p>
     </div>
     <a href="{{ url_for('tickets.create_ticket') }}" class="btn-primary" style="width: auto; font-size: 0.85rem; padding: 0.5rem 1.1rem; border-radius: 8px;">
@@ -416,35 +522,40 @@
   <div class="chatbot-container">
     <!-- Top Bar with Real-Time System Status -->
     <div class="chatbot-topbar">
-      <div style="display: flex; align-items: center; gap: 0.6rem;">
+      <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
         <span class="ai-status-badge">
           <span class="pulse-dot"></span>
-          AI RAG Engine Active &bull; Gemini LLM Connected
+          <span id="activeModelLabel">✨ Gemini 3.5 LLM Engine Connected</span>
         </span>
-        <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">
-          Knowledge Base Indexed
+        <span style="background: #ffffff; color: #15803d; border: 1px solid #86efac; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">
+          RAG Grounded
+        </span>
+        <span id="multiTurnBadge" style="background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 800;">
+          🧠 Multi-Turn Memory Active
         </span>
       </div>
 
       <button 
         type="button" 
         onclick="clearChatHistory()" 
-        style="background: none; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.775rem; font-weight: 600; color: #64748b; padding: 0.3rem 0.7rem; cursor: pointer; transition: all 0.2s;"
+        style="background: none; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.775rem; font-weight: 600; color: #64748b; padding: 0.35rem 0.75rem; cursor: pointer; transition: all 0.2s;"
         onmouseover="this.style.background='#f1f5f9'; this.style.color='#0f172a';"
         onmouseout="this.style.background='none'; this.style.color='#64748b';"
         title="Reset current chat session"
       >
-        🔄 Reset Chat
+        🔄 Reset Session
       </button>
     </div>
 
-    <!-- Quick Question Suggestion Chips -->
+    <!-- Quick Suggestion Chips Carousel -->
     <div class="chips-carousel">
-      <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; margin-right: 0.25rem;">Quick Help:</span>
-      <button type="button" class="prompt-chip" onclick="applyQuickPrompt('How do I fix VPN connection issues when it says connected but cannot reach internal servers?')">
+      <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; margin-right: 0.25rem;">
+        ⚡ Popular:
+      </span>
+      <button type="button" class="prompt-chip" onclick="applyQuickPrompt('How do I fix corporate VPN error 800 or connection failure?')">
         🔑 VPN Connection Fix
       </button>
-      <button type="button" class="prompt-chip" onclick="applyQuickPrompt('How do I restart the Windows Print Spooler service?')">
+      <button type="button" class="prompt-chip" onclick="applyQuickPrompt('Network printer shows offline or jobs are stuck in spooler. How to clear?')">
         🖨️ Restart Print Spooler
       </button>
       <button type="button" class="prompt-chip" onclick="applyQuickPrompt('How to reset company domain password securely?')">
@@ -465,14 +576,14 @@
         <div class="chat-avatar chat-avatar-bot">✨</div>
         <div class="chat-bubble chat-bubble-bot">
           <div class="bubble-meta bubble-meta-bot">
-            <strong>🤖 IT Helpdesk AI Assistant</strong> &bull; <span style="color: #64748b; font-weight: normal;">Verified SOPs</span>
+            <strong>🤖 Google Gemini 3.5 IT Assistant</strong> &bull; <span style="color: #64748b; font-weight: normal;">Verified SOPs</span>
           </div>
           <div class="comment-text">
-            Hello <strong>{{ current_user.username }}</strong>! I'm your interactive IT Self-Service Assistant.
+            Hello <strong>{{ current_user.username }}</strong>! I am your <strong>Enterprise IT Helpdesk AI</strong> powered by <strong>Google Gemini 3.5</strong>.
             <br><br>
-            I can instantly guide you through troubleshooting <strong>VPN issues, network configurations, printer errors, password resets, and hardware requests</strong> from our company standard operating procedures.
+            I provide authoritative step-by-step solutions for <strong>VPN, Outlook, network printing, Wi-Fi, active directory passwords, software permissions, and hardware diagnostics</strong> grounded against our internal Standard Operating Procedures.
             <br><br>
-            What technical issue can I help you resolve today?
+            What technical question or issue can I help you resolve today?
           </div>
         </div>
       </div>
@@ -504,19 +615,19 @@
             type="text" 
             id="chatInput" 
             class="modern-chat-input" 
-            placeholder="Type your technical question (e.g., 'VPN says connected but server not opening')..." 
+            placeholder="Type your technical question (e.g., 'VPN connected but remote server not opening')..." 
             required 
             autocomplete="off"
           >
           <button type="submit" id="sendBtn" class="btn-send-gradient">
-            <span>Ask AI</span>
+            <span>Ask Gemini</span>
             <span>➤</span>
           </button>
         </div>
       </form>
       <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.45rem; padding: 0 0.5rem; font-size: 0.725rem; color: #94a3b8;">
         <span>Press <kbd style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 1px 4px; font-size: 0.7rem; color: #475569;">Enter ↵</kbd> to submit</span>
-        <span>🔒 Secure Internal Enterprise Knowledge Base</span>
+        <span>🧠 Multi-turn conversation memory active</span>
       </div>
     </div>
   </div>
@@ -530,6 +641,10 @@ const sendBtn = document.getElementById('sendBtn');
 const ticketPromptBar = document.getElementById('ticketPromptBar');
 const prefillTitle = document.getElementById('prefillTitle');
 const prefillDesc = document.getElementById('prefillDesc');
+const activeModelLabel = document.getElementById('activeModelLabel');
+
+// Client-side multi-turn memory
+let clientHistory = [];
 
 function applyQuickPrompt(text) {
   chatInput.value = text;
@@ -538,16 +653,17 @@ function applyQuickPrompt(text) {
 }
 
 function clearChatHistory() {
-  if (!confirm('Start a fresh conversation session?')) return;
+  if (!confirm('Start a fresh conversation session? All previous memory will be cleared.')) return;
+  clientHistory = [];
   chatMessages.innerHTML = `
     <div class="message-row message-row-bot">
       <div class="chat-avatar chat-avatar-bot">✨</div>
       <div class="chat-bubble chat-bubble-bot">
         <div class="bubble-meta bubble-meta-bot">
-          <strong>🤖 IT Helpdesk AI Assistant</strong> &bull; <span style="color: #64748b; font-weight: normal;">Verified SOPs</span>
+          <strong>🤖 Google Gemini 3.5 IT Assistant</strong> &bull; <span style="color: #64748b; font-weight: normal;">Session Reset</span>
         </div>
         <div class="comment-text">
-          Fresh session started. How can I assist you with your IT equipment or software today?
+          Fresh session started. What technical issue or question can I help you resolve today?
         </div>
       </div>
     </div>
@@ -563,6 +679,8 @@ chatForm.addEventListener('submit', async (e) => {
 
   // 1. Append User Message
   appendUserMessage(query);
+  clientHistory.push({ role: 'user', text: query });
+
   chatInput.value = '';
   chatInput.disabled = true;
   sendBtn.disabled = true;
@@ -574,10 +692,20 @@ chatForm.addEventListener('submit', async (e) => {
     const res = await fetch("{{ url_for('chat.query_bot') }}", {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: query })
+      body: JSON.stringify({ 
+        message: query,
+        history: clientHistory.slice(-6)
+      })
     });
     const data = await res.json();
     typingIndicator.remove();
+
+    if (data.model_used) {
+      activeModelLabel.textContent = `✨ ${data.model_used} Active`;
+    }
+
+    // Save bot response to multi-turn memory
+    clientHistory.push({ role: 'model', text: data.answer });
 
     let formattedAnswer = renderMarkdown(data.answer);
 
@@ -587,7 +715,7 @@ chatForm.addEventListener('submit', async (e) => {
       citationsHtml += `
         <div class="citation-container">
           <div class="citation-title">
-            <span>📖</span> Supporting SOP Knowledge Sources:
+            <span>📖</span> Verified SOP Knowledge Sources:
           </div>
       `;
       data.sources.forEach(s => {
@@ -606,7 +734,25 @@ chatForm.addEventListener('submit', async (e) => {
       citationsHtml += '</div>';
     }
 
-    appendBotMessage(formattedAnswer, citationsHtml, data.answer);
+    // Build Interactive Follow-Up Chips if returned
+    let followUpsHtml = '';
+    if (data.follow_ups && data.follow_ups.length > 0) {
+      followUpsHtml += `
+        <div class="followup-container">
+          <span class="followup-label">💡 Suggested next questions:</span>
+          <div class="followup-chips">
+      `;
+      data.follow_ups.forEach(q => {
+        followUpsHtml += `
+          <button type="button" class="followup-chip" onclick="applyQuickPrompt('${escapeForAttribute(q)}')">
+            <span>↳</span> ${escapeHtml(q)}
+          </button>
+        `;
+      });
+      followUpsHtml += '</div></div>';
+    }
+
+    appendBotMessage(formattedAnswer, citationsHtml, followUpsHtml, data.answer, data.model_used, data.latency_ms);
 
     // Show ticket conversion prompt
     if (data.suggested_ticket_title) {
@@ -617,7 +763,7 @@ chatForm.addEventListener('submit', async (e) => {
 
   } catch (err) {
     typingIndicator.remove();
-    appendBotMessage('<span style="color: #dc2626; font-weight: 600;">⚠ Error communicating with knowledge assistant. Please try again or create a ticket directly.</span>', '', '');
+    appendBotMessage('<span style="color: #dc2626; font-weight: 600;">⚠ Error communicating with Gemini assistant. Please try again or create a ticket directly.</span>', '', '', '');
   } finally {
     chatInput.disabled = false;
     sendBtn.disabled = false;
@@ -644,7 +790,7 @@ function appendUserMessage(text) {
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-function appendBotMessage(formattedText, citationsHtml, rawAnswer) {
+function appendBotMessage(formattedText, citationsHtml, followUpsHtml, rawAnswer, modelName, latencyMs) {
   const row = document.createElement('div');
   row.className = 'message-row message-row-bot';
 
@@ -653,10 +799,13 @@ function appendBotMessage(formattedText, citationsHtml, rawAnswer) {
     <div class="chat-avatar chat-avatar-bot">✨</div>
     <div class="chat-bubble chat-bubble-bot" id="${msgId}">
       <div class="bubble-meta bubble-meta-bot">
-        <strong>🤖 IT Helpdesk AI Assistant</strong> &bull; <span style="color: #64748b; font-weight: normal;">Just now</span>
+        <strong>🤖 ${modelName || 'Google Gemini IT Specialist'}</strong> &bull; 
+        <span style="color: #64748b; font-weight: normal;">Just now</span>
+        ${latencyMs ? `<span style="margin-left: 0.35rem; background: #f1f5f9; color: #475569; padding: 1px 6px; border-radius: 4px; font-size: 0.68rem; font-weight: 700; border: 1px solid #e2e8f0;">⚡ ${latencyMs}ms</span>` : ''}
       </div>
       <div class="comment-text">${formattedText}</div>
       ${citationsHtml}
+      ${followUpsHtml || ''}
       ${rawAnswer ? `
         <button type="button" class="copy-msg-btn" onclick="copyAnswerText(this, '${escapeForAttribute(rawAnswer)}')">
           <span>📋</span> Copy Solution
@@ -680,7 +829,7 @@ function appendTypingIndicator() {
         <span></span>
       </div>
       <span style="font-size: 0.8rem; font-weight: 600; color: #64748b;">
-        Searching SOP knowledge base &amp; formulating verified steps...
+        Gemini 3.5 reasoning &amp; grounding against verified SOPs...
       </span>
     </div>
   `;
@@ -703,6 +852,17 @@ function copyAnswerText(btn, text) {
   });
 }
 
+function copyCodeSnippet(btn, code) {
+  navigator.clipboard.writeText(code).then(() => {
+    btn.innerHTML = '✓ Copied';
+    btn.style.color = '#4ade80';
+    setTimeout(() => {
+      btn.innerHTML = '📋 Copy';
+      btn.style.color = '';
+    }, 2000);
+  });
+}
+
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
@@ -716,27 +876,54 @@ function escapeForAttribute(text) {
 function renderMarkdown(text) {
   if (!text) return '';
   let html = text;
-  // Escape raw HTML brackets
-  html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  
-  // Bold **text**
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #0f172a;">$1</strong>');
-  
-  // Italic *text*
+
+  // 1. Fenced Code Blocks: ```lang ... ```
+  html = html.replace(/```([a-zA-Z0-9_\-\.]*)\n([\s\S]*?)```/g, function(match, lang, code) {
+    const language = lang.trim() || 'TERMINAL';
+    const escapedCode = escapeHtml(code.trim());
+    const attrCode = escapeForAttribute(code.trim());
+    return `
+      <div class="code-terminal-box">
+        <div class="code-terminal-header">
+          <span>🖥️ ${language.toUpperCase()}</span>
+          <button type="button" class="code-terminal-copy-btn" onclick="copyCodeSnippet(this, '${attrCode}')">
+            📋 Copy
+          </button>
+        </div>
+        <pre class="code-terminal-body"><code>${escapedCode}</code></pre>
+      </div>
+    `;
+  });
+
+  // 2. Bold headers: ### Header
+  html = html.replace(/^### (.*$)/gim, '<h4 style="margin: 0.85rem 0 0.35rem 0; font-size: 0.975rem; font-weight: 800; color: #0f172a;">$1</h4>');
+  html = html.replace(/^## (.*$)/gim, '<h3 style="margin: 1rem 0 0.45rem 0; font-size: 1.05rem; font-weight: 800; color: #0f172a;">$1</h3>');
+
+  // 3. Bold **text**
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #0f172a; font-weight: 700;">$1</strong>');
+
+  // 4. Italic *text*
   html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  
-  // Inline code `code`
-  html = html.replace(/`(.*?)`/g, '<code style="background: #f1f5f9; color: #0284c7; padding: 2px 6px; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.875em; border: 1px solid #e2e8f0; font-weight: 600;">$1</code>');
-  
-  // Bullet lists (- or * at start of line)
+
+  // 5. Inline code `code`
+  html = html.replace(/`([^`]+)`/g, '<code style="background: #f1f5f9; color: #0284c7; padding: 2px 6px; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85em; border: 1px solid #e2e8f0; font-weight: 600;">$1</code>');
+
+  // 6. Alert callouts: > [!NOTE] or > [!WARNING] or > [!TIP]
+  html = html.replace(/^>\s*\[!(NOTE|TIP|IMPORTANT)\]\s*(.*$)/gim, '<div class="chat-alert-box"><strong>ℹ️ $1:</strong> $2</div>');
+  html = html.replace(/^>\s*\[!(WARNING|CAUTION)\]\s*(.*$)/gim, '<div class="chat-alert-box" style="border-left-color: #f59e0b; background: #fffbeb; color: #92400e;"><strong>⚠️ $1:</strong> $2</div>');
+
+  // 7. Standard blockquotes: > Quote
+  html = html.replace(/^>\s+(.*$)/gim, '<blockquote style="border-left: 3px solid #cbd5e1; margin: 0.5rem 0; padding-left: 0.75rem; color: #475569; font-style: italic;">$1</blockquote>');
+
+  // 8. Bullet lists (- or * at start of line)
   html = html.replace(/(?:^|\n)[-*]\s+(.+)/g, '<li style="margin-left: 1.25rem; margin-bottom: 0.35rem; color: #334155;">$1</li>');
-  
-  // Numbered lists (1. 2. etc)
+
+  // 9. Numbered lists (1. 2. etc)
   html = html.replace(/(?:^|\n)(\d+)\.\s+(.+)/g, '<li style="margin-left: 1.25rem; margin-bottom: 0.35rem; color: #334155;"><strong style="color: #1e3a8a;">Step $1:</strong> $2</li>');
-  
-  // Double newlines to <br><br> and single to <br>
+
+  // 10. Double newlines to <br><br> and single to <br> (ignoring terminal blocks)
   html = html.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
-  
+
   return html;
 }
 </script>
