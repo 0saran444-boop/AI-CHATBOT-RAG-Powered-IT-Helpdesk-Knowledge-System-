@@ -95,16 +95,16 @@ class LLMService:
             hist_context = "\n\n".join(hist_texts) if hist_texts else "None"
 
             current_turn_prompt = (
-                f"An employee asked the following technical inquiry:\n"
+                f"An employee asked the following inquiry:\n"
                 f"\"{user_query}\"\n\n"
                 f"Internal Company IT Documentation & SOPs:\n{sop_context}\n\n"
                 f"Past Resolved Similar Tickets:\n{hist_context}\n\n"
                 f"Instructions:\n"
-                f"1. Evaluate whether the internal SOPs contain the answer to \"{user_query}\".\n"
-                f"   - If YES: Provide step-by-step instructions based on the internal SOP, citing the document name (e.g. **{knowledge_matches[0].get('document_name')}**).\n"
-                f"   - If NO or superficial overlap: Answer the employee's actual question accurately using technical knowledge.\n"
-                f"2. Include root cause, troubleshooting steps, and exact terminal/powershell commands where applicable.\n"
-                f"3. Provide 2-3 follow-up suggestions at the end."
+                f"1. Directly and cleanly answer the employee's question without preamble.\n"
+                f"2. If internal documentation genuinely answers the question, follow the SOP and cite the document name (e.g. **{knowledge_matches[0].get('document_name')}**).\n"
+                f"3. If internal documentation is NOT relevant (e.g., general knowledge, personal questions, or unrelated topics), directly provide the factual answer without mentioning, citing, or discussing the irrelevant internal documents.\n"
+                f"4. For technical issues, include root cause, troubleshooting steps, and exact terminal/powershell commands where applicable.\n"
+                f"5. Provide 2-3 follow-up suggestions at the end."
             )
         else:
             current_turn_prompt = (
@@ -156,7 +156,7 @@ class LLMService:
                         }
                     }
 
-                    timeout = 6 if '3.8' in model_name else 12
+                    timeout = 3.5 if '3.8' in model_name else 12
                     resp = requests.post(url, json=payload, timeout=timeout)
                     if resp.status_code == 200:
                         data = resp.json()
@@ -182,7 +182,8 @@ class LLMService:
                                     return {
                                         "answer": clean_answer,
                                         "follow_ups": follow_ups[:3],
-                                        "model_used": f"Google {clean_model_name}",
+                                        "model_used": "Gemini AI Assistant",
+                                        "internal_model": clean_model_name,
                                         "latency_ms": elapsed_ms,
                                         "confidence": 0.95 if knowledge_matches else 0.88
                                     }

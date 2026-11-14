@@ -701,7 +701,7 @@ chatForm.addEventListener('submit', async (e) => {
     typingIndicator.remove();
 
     if (data.model_used) {
-      activeModelLabel.textContent = `✨ ${data.model_used} Active`;
+      activeModelLabel.textContent = '✨ Gemini AI Assistant Active';
     }
 
     // Save bot response to multi-turn memory
@@ -799,9 +799,8 @@ function appendBotMessage(formattedText, citationsHtml, followUpsHtml, rawAnswer
     <div class="chat-avatar chat-avatar-bot">✨</div>
     <div class="chat-bubble chat-bubble-bot" id="${msgId}">
       <div class="bubble-meta bubble-meta-bot">
-        <strong>🤖 ${modelName || 'Google Gemini IT Specialist'}</strong> &bull; 
+        <strong>🤖 Gemini AI Assistant</strong> &bull; 
         <span style="color: #64748b; font-weight: normal;">Just now</span>
-        ${latencyMs ? `<span style="margin-left: 0.35rem; background: #f1f5f9; color: #475569; padding: 1px 6px; border-radius: 4px; font-size: 0.68rem; font-weight: 700; border: 1px solid #e2e8f0;">⚡ ${latencyMs}ms</span>` : ''}
       </div>
       <div class="comment-text">${formattedText}</div>
       ${citationsHtml}
