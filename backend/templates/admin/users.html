@@ -4,24 +4,25 @@
 
 {% block content %}
 <style>
-  /* Modern Interactive ON / OFF Toggle Switch */
+  /* Modern High-Precision ON / OFF Toggle Switch */
   .status-toggle-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.3rem 0.75rem 0.3rem 0.45rem;
+    gap: 0.6rem;
+    padding: 0.25rem 0.75rem 0.25rem 0.35rem;
     border-radius: 999px;
     cursor: pointer;
     font-size: 0.8rem;
     font-weight: 700;
-    border: 1px solid transparent;
+    border: 1.5px solid transparent;
     transition: all 0.2s ease;
     background: #ffffff;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    box-sizing: border-box;
   }
   .status-toggle-btn.is-on {
     background: #ecfdf5;
-    border-color: #a7f3d0;
+    border-color: #6ee7b7;
     color: #065f46;
   }
   .status-toggle-btn.is-on:hover {
@@ -30,45 +31,60 @@
     transform: translateY(-1px);
   }
   .status-toggle-btn.is-off {
-    background: #fef2f2;
-    border-color: #fecaca;
-    color: #991b1b;
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #64748b;
   }
   .status-toggle-btn.is-off:hover {
-    background: #fee2e2;
-    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+    background: #f1f5f9;
+    box-shadow: 0 2px 4px rgba(148, 163, 184, 0.2);
     transform: translateY(-1px);
   }
   .switch-track {
-    width: 32px;
-    height: 18px;
+    width: 40px;
+    height: 22px;
     border-radius: 999px;
     position: relative;
     display: inline-block;
-    transition: background-color 0.25s ease;
     flex-shrink: 0;
+    transition: background-color 0.25s ease;
+    box-sizing: border-box;
   }
   .is-on .switch-track {
     background-color: #10b981;
   }
   .is-off .switch-track {
-    background-color: #cbd5e1;
+    background-color: #94a3b8;
   }
   .switch-thumb {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     background-color: #ffffff;
     border-radius: 50%;
     position: absolute;
-    top: 2px;
+    top: 3px;
+    left: 3px;
     transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
   }
   .is-on .switch-thumb {
-    transform: translateX(16px);
+    transform: translateX(18px);
   }
   .is-off .switch-thumb {
-    transform: translateX(2px);
+    transform: translateX(0);
+  }
+  .status-text-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    white-space: nowrap;
+    line-height: 1;
+    display: inline-block;
+  }
+  .is-on .status-text-label {
+    color: #047857;
+  }
+  .is-off .status-text-label {
+    color: #475569;
   }
   .status-locked-pill {
     display: inline-flex;
@@ -94,7 +110,7 @@
   <div class="page-header-row">
     <div>
       <h2>User Role &amp; Status Management</h2>
-      <p class="subtitle">Assign RBAC permissions and toggle user active / inactive status</p>
+      <p class="subtitle">Assign RBAC permissions, toggle active status, and manage user accounts</p>
     </div>
     <a href="{{ url_for('admin.dashboard') }}" class="btn-secondary">&larr; Back to Admin Console</a>
   </div>
@@ -110,7 +126,8 @@
             <th>Current Role</th>
             <th style="text-align: center; white-space: nowrap;">Status (ON / OFF)</th>
             <th>Registered</th>
-            <th>Reassign Role</th>
+            <th>Role Assignment</th>
+            <th style="text-align: right; white-space: nowrap;">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -146,11 +163,11 @@
                       <span class="switch-track">
                         <span class="switch-thumb"></span>
                       </span>
-                      <span>
+                      <span class="status-text-label">
                         {% if u.is_active %}
-                          <strong style="color: #047857;">ON</strong> &bull; Active
+                          ON &bull; Active
                         {% else %}
-                          <strong style="color: #b91c1c;">OFF</strong> &bull; Inactive
+                          OFF &bull; Inactive
                         {% endif %}
                       </span>
                     </button>
@@ -158,18 +175,38 @@
                 {% endif %}
               </td>
               <td style="font-size: 0.85rem; color: var(--text-muted); white-space: nowrap;">{{ u.created_at.strftime('%b %d, %Y') }}</td>
+              <!-- Reassign Role -->
               <td>
-                <form action="{{ url_for('admin.manage_users') }}" method="POST" style="display: flex; gap: 0.5rem; align-items: center;">
+                <form action="{{ url_for('admin.manage_users') }}" method="POST" style="display: flex; gap: 0.4rem; align-items: center; margin: 0;">
                   <input type="hidden" name="user_id" value="{{ u.id }}">
-                  <select name="role" class="form-select" style="padding: 0.3rem 0.5rem; font-size: 0.85rem;">
+                  <select name="role" class="form-select" style="padding: 0.25rem 0.5rem; font-size: 0.825rem;">
                     {% for r in roles %}
                       <option value="{{ r.name }}" {% if u.role and u.role.name == r.name %}selected{% endif %}>
                         {{ r.name }}
                       </option>
                     {% endfor %}
                   </select>
-                  <button type="submit" class="btn-action">Update</button>
+                  <button type="submit" class="btn-action" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">Update</button>
                 </form>
+              </td>
+              <!-- Delete Option -->
+              <td style="text-align: right; white-space: nowrap;">
+                {% if u.id == current_user.id %}
+                  <span class="badge" style="background: #f1f5f9; color: #64748b; font-size: 0.75rem; border: 1px solid #e2e8f0;" title="You cannot delete your own admin account">
+                    🛡️ Protected
+                  </span>
+                {% else %}
+                  <form action="{{ url_for('admin.delete_user', user_id=u.id) }}" method="POST" style="margin: 0; display: inline;" onsubmit="return confirm('Permanently delete user {{ u.username }}? This action cannot be undone.');">
+                    <button 
+                      type="submit" 
+                      class="btn-action" 
+                      style="color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; font-size: 0.8rem; padding: 0.3rem 0.65rem; border-radius: 6px; font-weight: 600; cursor: pointer;"
+                      title="Permanently delete user {{ u.username }}"
+                    >
+                      🗑️ Delete
+                    </button>
+                  </form>
+                {% endif %}
               </td>
             </tr>
           {% endfor %}
@@ -179,4 +216,3 @@
   </div>
 </div>
 {% endblock %}
-

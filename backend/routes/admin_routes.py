@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from backend.extensions import db
 from backend.models.user import User
 from backend.models.role import Role
-from backend.models.ticket import Ticket, TicketCategory
+from backend.models.ticket import Ticket, TicketCategory, TicketComment
 from backend.models.ai_response import AIResponse
 from backend.models.sla import SLAPolicy
 from backend.models.audit import AuditLog
@@ -104,6 +104,30 @@ def toggle_user_status(user_id: int):
     status_str = "ACTIVE (ON)" if user.is_active else "INACTIVE (OFF)"
     AuditLog.log("USER_STATUS_TOGGLED", "User", user.id, current_user.id, f"Toggled {user.username} status to {status_str}")
     flash(f"User '{user.username}' status changed to {status_str}.", 'success' if user.is_active else 'info')
+    return redirect(url_for('admin.manage_users'))
+
+
+@admin_bp.route('/users/<int:user_id>/delete', methods=['POST'])
+def delete_user(user_id: int):
+    """Delete a user account with safety checks and clean relationship cleanup."""
+    if user_id == current_user.id:
+        flash("You cannot delete your own administrative account.", 'warning')
+        return redirect(url_for('admin.manage_users'))
+
+    user = User.query.get_or_404(user_id)
+    username = user.username
+
+    # Reassign created tickets and comments to admin to maintain complete data integrity
+    Ticket.query.filter_by(created_by_id=user.id).update({'created_by_id': current_user.id})
+    Ticket.query.filter_by(assigned_to_id=user.id).update({'assigned_to_id': None})
+    TicketComment.query.filter_by(user_id=user.id).update({'user_id': current_user.id})
+    AuditLog.query.filter_by(user_id=user.id).update({'user_id': None})
+
+    db.session.delete(user)
+    db.session.commit()
+
+    AuditLog.log("USER_DELETED", "User", user_id, current_user.id, f"Permanently deleted user '{username}'")
+    flash(f"User '{username}' has been deleted successfully.", 'success')
     return redirect(url_for('admin.manage_users'))
 
 
@@ -312,17 +336,31 @@ def export_csv():
     )
 
 
+def format_duration(seconds: int, login_count: int) -> str:
+    """Format duration in seconds into a friendly human-readable span."""
+    if seconds < 60:
+        return 'Single session' if login_count == 1 else f'{seconds}s span'
+    elif seconds < 3600:
+        mins = seconds // 60
+        return f'{mins}m span'
+    else:
+        hours = seconds // 3600
+        mins = (seconds % 3600) // 60
+        return f'{hours}h {mins}m span' if mins > 0 else f'{hours}h span'
+
+
 @admin_bp.route('/audit-logs', methods=['GET'])
 def audit_logs():
-    """Audit Logging Viewer with automatic 30-day retention and date-wise filtering."""
+    """Audit Logging Viewer with automatic 30-day retention, date-wise filtering, and grouped user login view."""
     # 1. Automatic 1-Month Cleanup: Automatically delete audit logs older than 30 days
     one_month_ago = datetime.utcnow() - timedelta(days=30)
     purged_count = AuditLog.query.filter(AuditLog.timestamp < one_month_ago).delete(synchronize_session=False)
     if purged_count > 0:
         db.session.commit()
 
-    # 2. Filters & date-wise queries
-    filter_type = request.args.get('filter', 'all')
+    # 2. Filters & view parameters
+    filter_type = request.args.get('filter', 'today_logins')
+    view_mode = request.args.get('view', 'users' if filter_type in ['today_logins', 'all_logins', 'users'] else 'stream')
     date_str = request.args.get('date', '').strip()
 
     today = datetime.utcnow().date()
@@ -351,9 +389,55 @@ def audit_logs():
         except ValueError:
             pass
 
-    logs = query.order_by(AuditLog.timestamp.desc()).limit(200).all()
+    logs = query.order_by(AuditLog.timestamp.desc()).limit(300).all()
 
-    # 3. Metrics for stats cards
+    # 3. Group by user to prevent repeated rows (NO duplicate users!)
+    user_map = {}
+    for log in logs:
+        uid = log.user_id or 0
+        if uid not in user_map:
+            user_map[uid] = []
+        user_map[uid].append(log)
+
+    user_summaries = []
+    for uid, ulogs in user_map.items():
+        user = db.session.get(User, uid) if uid else None
+        username = user.username if user else ('System / AI' if uid == 0 else f'User #{uid}')
+        email = user.email if user else '-'
+        role_name = user.role.name if (user and user.role) else 'None'
+        is_active = user.is_active if user else False
+        
+        success_count = sum(1 for x in ulogs if x.action == 'LOGIN_SUCCESS')
+        failed_count = sum(1 for x in ulogs if x.action in ['LOGIN_FAILED', 'LOGIN_BLOCKED_LOCKED', 'ACCOUNT_LOCKED'])
+        total_count = len(ulogs)
+        
+        sorted_times = sorted([x.timestamp for x in ulogs])
+        first_time = sorted_times[0]
+        last_time = sorted_times[-1]
+        diff_secs = int((last_time - first_time).total_seconds())
+        duration_label = format_duration(diff_secs, total_count)
+        
+        user_summaries.append({
+            'user_id': uid,
+            'user': user,
+            'username': username,
+            'email': email,
+            'role': role_name,
+            'is_active': is_active,
+            'total_count': total_count,
+            'success_count': success_count,
+            'failed_count': failed_count,
+            'first_time': first_time,
+            'last_time': last_time,
+            'duration_label': duration_label,
+            'diff_seconds': diff_secs,
+            'sessions': ulogs
+        })
+
+    # Sort grouped users by latest activity descending
+    user_summaries.sort(key=lambda s: s['last_time'], reverse=True)
+
+    # 4. Metrics for stats cards
     today_logins_count = AuditLog.query.filter(
         AuditLog.action == 'LOGIN_SUCCESS',
         AuditLog.timestamp >= today_start,
@@ -368,17 +452,38 @@ def audit_logs():
 
     total_logs_count = AuditLog.query.count()
 
+    unique_active_users_today = len(set(
+        l.user_id for l in AuditLog.query.filter(
+            AuditLog.action == 'LOGIN_SUCCESS',
+            AuditLog.timestamp >= today_start,
+            AuditLog.timestamp <= today_end,
+            AuditLog.user_id.isnot(None)
+        ).all()
+    ))
+
     return render_template(
         'admin/audit_logs.html',
         logs=logs,
+        user_summaries=user_summaries,
+        view_mode=view_mode,
         filter_type=filter_type,
         selected_date=date_str,
         today_logins_count=today_logins_count,
         today_failed_count=today_failed_count,
+        unique_active_users_today=unique_active_users_today,
         total_logs_count=total_logs_count,
         today_date_str=today.strftime('%Y-%m-%d'),
         purged_auto_count=purged_count
     )
+
+
+@admin_bp.route('/audit-logs/user/<int:user_id>/delete', methods=['POST'])
+def delete_user_audit_logs(user_id: int):
+    """Delete all audit logs for a specific user."""
+    deleted = AuditLog.query.filter_by(user_id=user_id).delete(synchronize_session=False)
+    db.session.commit()
+    flash(f"Deleted {deleted} audit log records for user #{user_id}.", 'info')
+    return redirect(request.referrer or url_for('admin.audit_logs'))
 
 
 @admin_bp.route('/audit-logs/<int:log_id>/delete', methods=['POST'])
@@ -419,6 +524,8 @@ def purge_audit_logs():
         msg = "No logs deleted."
 
     db.session.commit()
+    flash(msg, 'success')
+    return redirect(url_for('admin.audit_logs'))
     flash(msg, 'success')
     return redirect(url_for('admin.audit_logs'))
 
