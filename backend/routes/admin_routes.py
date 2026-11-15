@@ -131,6 +131,89 @@ def delete_user(user_id: int):
     return redirect(url_for('admin.manage_users'))
 
 
+@admin_bp.route('/users/export', methods=['GET'])
+@admin_bp.route('/users/export-analytics', methods=['GET'])
+def export_users_analytics():
+    """Export comprehensive user analytics and account telemetry to CSV."""
+    import csv
+    import io
+    from flask import Response
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        'User ID',
+        'Username',
+        'Email',
+        'Role',
+        'Status (Active / Inactive)',
+        'Total Logins',
+        'Successful Logins',
+        'Failed Attempts',
+        'Account Locked',
+        'Last Login Timestamp',
+        'Active Duration Span',
+        'Tickets Created Count',
+        'Tickets Assigned Count',
+        'Account Registered At'
+    ])
+
+    users = User.query.order_by(User.id.asc()).all()
+
+    login_actions = ['LOGIN_SUCCESS', 'LOGIN_FAILED', 'LOGIN_BLOCKED_LOCKED', 'ACCOUNT_LOCKED']
+    user_login_logs = AuditLog.query.filter(AuditLog.action.in_(login_actions)).order_by(AuditLog.timestamp.asc()).all()
+    user_logs_map = {}
+    for l in user_login_logs:
+        uid = l.user_id or 0
+        if uid not in user_logs_map:
+            user_logs_map[uid] = []
+        user_logs_map[uid].append(l)
+
+    for u in users:
+        ulogs = user_logs_map.get(u.id, [])
+        total_logins = len(ulogs)
+        success_logins = sum(1 for x in ulogs if x.action == 'LOGIN_SUCCESS')
+        failed_logins = sum(1 for x in ulogs if x.action in ['LOGIN_FAILED', 'LOGIN_BLOCKED_LOCKED', 'ACCOUNT_LOCKED'])
+
+        last_login_str = "Never"
+        duration_label = "No session"
+        if ulogs:
+            sorted_times = [x.timestamp for x in ulogs]
+            last_login_str = sorted_times[-1].strftime('%Y-%m-%d %H:%M:%S')
+            diff_secs = int((sorted_times[-1] - sorted_times[0]).total_seconds())
+            duration_label = format_duration(diff_secs, len(ulogs))
+        elif u.last_login_at:
+            last_login_str = u.last_login_at.strftime('%Y-%m-%d %H:%M:%S')
+
+        created_cnt = u.created_tickets.count() if hasattr(u, 'created_tickets') else 0
+        assigned_cnt = u.assigned_tickets.count() if hasattr(u, 'assigned_tickets') else 0
+
+        writer.writerow([
+            f"#{u.id}",
+            u.username,
+            u.email,
+            u.role.name if u.role else "None",
+            "Active (ON)" if u.is_active else "Inactive (OFF)",
+            total_logins,
+            success_logins,
+            failed_logins,
+            "Yes" if u.is_locked else "No",
+            last_login_str,
+            duration_label,
+            created_cnt,
+            assigned_cnt,
+            u.created_at.strftime('%Y-%m-%d %H:%M:%S') if u.created_at else ""
+        ])
+
+    output.seek(0)
+    filename = f"users_analytics_report_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment;filename={filename}"}
+    )
+
+
 @admin_bp.route('/sla', methods=['GET', 'POST'])
 def manage_sla():
     """SLA Policy Configuration."""
@@ -504,4 +587,89 @@ def purge_audit_logs():
     db.session.commit()
     flash(msg, 'success')
     return redirect(url_for('admin.audit_logs'))
+
+
+@admin_bp.route('/audit-logs/export', methods=['GET'])
+@admin_bp.route('/audit-logs/export-analytics', methods=['GET'])
+def export_audit_logs_analytics():
+    """Export filtered or complete audit log analytics to CSV."""
+    import csv
+    import io
+    from flask import Response
+
+    filter_type = request.args.get('filter', '')
+    date_str = request.args.get('date', '').strip()
+
+    today = datetime.utcnow().date()
+    today_start = datetime.combine(today, datetime.min.time())
+    today_end = datetime.combine(today, datetime.max.time())
+
+    login_actions = ['LOGIN_SUCCESS', 'LOGIN_FAILED', 'LOGIN_BLOCKED_LOCKED', 'ACCOUNT_LOCKED']
+
+    query = AuditLog.query
+
+    if filter_type == 'today_logins':
+        query = query.filter(
+            AuditLog.action.in_(login_actions),
+            AuditLog.timestamp >= today_start,
+            AuditLog.timestamp <= today_end
+        )
+    elif filter_type == 'all_logins':
+        query = query.filter(AuditLog.action.in_(login_actions))
+
+    if date_str:
+        try:
+            target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            d_start = datetime.combine(target_date, datetime.min.time())
+            d_end = datetime.combine(target_date, datetime.max.time())
+            query = query.filter(AuditLog.timestamp >= d_start, AuditLog.timestamp <= d_end)
+        except ValueError:
+            pass
+
+    logs = query.order_by(AuditLog.timestamp.desc()).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        'Log ID',
+        'Timestamp (UTC)',
+        'Date',
+        'Time',
+        'User ID',
+        'Username',
+        'User Email',
+        'User Role',
+        'Account Status',
+        'Action / Event Type',
+        'Entity Type',
+        'Entity ID',
+        'Event Details / Description'
+    ])
+
+    for l in logs:
+        u = l.user
+        writer.writerow([
+            f"#{l.id}",
+            l.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            l.timestamp.strftime('%Y-%m-%d'),
+            l.timestamp.strftime('%H:%M:%S'),
+            f"#{u.id}" if u else "System",
+            u.username if u else "System / Automated",
+            u.email if u else "system@helpdesk.local",
+            u.role.name if (u and u.role) else "N/A",
+            ("Active (ON)" if u.is_active else "Inactive (OFF)") if u else "System",
+            l.action,
+            l.entity_type,
+            f"#{l.entity_id}" if l.entity_id else "",
+            l.details or ""
+        ])
+
+    output.seek(0)
+    tag = date_str or filter_type or 'all'
+    filename = f"audit_logs_analytics_{tag}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment;filename={filename}"}
+    )
 

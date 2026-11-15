@@ -104,6 +104,31 @@
     border-radius: 50%;
     background: #16a34a;
   }
+
+  /* Export Analytics Button */
+  .btn-export-analytics {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #ffffff !important;
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 0.48rem 1.15rem;
+    border-radius: 8px;
+    border: 1px solid #1e40af;
+    cursor: pointer;
+    box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.25);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    line-height: 1.25;
+  }
+  .btn-export-analytics:hover {
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+    transform: translateY(-1.5px);
+    box-shadow: 0 6px 12px -2px rgba(37, 99, 235, 0.35);
+    color: #ffffff !important;
+  }
 </style>
 
 <div class="tickets-page-container">
@@ -112,7 +137,12 @@
       <h2>User Role &amp; Status Management</h2>
       <p class="subtitle">Assign RBAC permissions, toggle active status, and manage user accounts</p>
     </div>
-    <a href="{{ url_for('admin.dashboard') }}" class="btn-secondary">&larr; Back to Admin Console</a>
+    <div style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
+      <a href="{{ url_for('admin.export_users_analytics') }}" class="btn-export-analytics" title="Export complete user accounts and login analytics as CSV">
+        <span>📥</span> Export Analytics (CSV)
+      </a>
+      <a href="{{ url_for('admin.dashboard') }}" class="btn-secondary">&larr; Back to Admin Console</a>
+    </div>
   </div>
 
   <div class="section-card">
