@@ -8,7 +8,6 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from flask import Flask, redirect, url_for
-from flask_login import current_user
 from backend.config import Config
 from backend.extensions import db, login_manager
 from backend.models.user import User
@@ -73,13 +72,9 @@ def create_app(config_class=Config):
             Role=Role
         )
 
-    # Root route redirect
+    # Root route: always direct to the landing / login page
     @app.route('/')
     def index():
-        if current_user.is_authenticated:
-            if current_user.is_admin:
-                return redirect(url_for('admin.dashboard'))
-            return redirect(url_for('auth.dashboard'))
         return redirect(url_for('auth.login'))
 
     # Initialize database tables and seed baseline data

@@ -1,9 +1,8 @@
-import re
 from datetime import datetime, timedelta
 from typing import Optional, Tuple
 from backend.extensions import db
 from backend.models.ticket import (
-    Ticket, TicketCategory, TicketComment, TicketAttachment, 
+    Ticket, TicketCategory, TicketComment, 
     TicketStatusHistory, TicketEscalation, TicketFeedback
 )
 from backend.models.sla import SLAPolicy

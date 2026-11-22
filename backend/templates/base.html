@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}IT Helpdesk RAG{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='2') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css', v='3') }}">
   <style>
     /* Immediate browser override: disable Edge/IE native password reveal button */
     input[type="password"]::-ms-reveal,
@@ -17,6 +17,16 @@
       pointer-events: none;
     }
   </style>
+  <script>
+    // 1. Tab-Session Verification: Protect against auto-login when opening a new tab
+    (function() {
+      var tabSession = sessionStorage.getItem('tab_session_id');
+      if (!tabSession) {
+        // This is a new or unauthenticated tab! Immediately redirect to landing / login page
+        window.location.replace("{{ url_for('auth.login') }}");
+      }
+    })();
+  </script>
   {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -90,6 +100,51 @@
   </main>
 
   <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+  <script>
+    // 2. Cross-Tab Real-Time Synchronized Logout
+    (function() {
+      var authBroadcast = null;
+      try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          authBroadcast = new BroadcastChannel('helpdesk_auth_sync');
+          authBroadcast.onmessage = function(event) {
+            if (event.data && event.data.type === 'LOGOUT') {
+              handleRemoteLogout();
+            }
+          };
+        }
+      } catch (err) {}
+
+      function handleRemoteLogout() {
+        sessionStorage.removeItem('tab_session_id');
+        window.location.replace("{{ url_for('auth.login') }}");
+      }
+
+      // Universal storage event listener for cross-tab logout
+      window.addEventListener('storage', function(e) {
+        if (e.key === 'helpdesk_global_logout_time') {
+          handleRemoteLogout();
+        }
+      });
+
+      // Hook all logout links and buttons
+      document.addEventListener('DOMContentLoaded', function() {
+        var logoutElements = document.querySelectorAll('a[href*="logout"], .btn-logout');
+        logoutElements.forEach(function(el) {
+          el.addEventListener('click', function() {
+            // Signal all other open tabs to log out immediately
+            localStorage.setItem('helpdesk_global_logout_time', Date.now().toString());
+            if (authBroadcast) {
+              try {
+                authBroadcast.postMessage({ type: 'LOGOUT' });
+              } catch(e) {}
+            }
+            sessionStorage.removeItem('tab_session_id');
+          });
+        });
+      });
+    })();
+  </script>
   {% block extra_scripts %}{% endblock %}
 </body>
 </html>

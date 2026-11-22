@@ -1,10 +1,9 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
-import os
 
 from backend.extensions import db
-from backend.models.ticket import Ticket, TicketCategory, TicketComment, TicketAttachment, TicketStatusHistory, TicketFeedback
+from backend.models.ticket import Ticket, TicketCategory, TicketAttachment
 from backend.models.ai_response import AIResponse
 from backend.models.user import User
 from backend.models.role import Role

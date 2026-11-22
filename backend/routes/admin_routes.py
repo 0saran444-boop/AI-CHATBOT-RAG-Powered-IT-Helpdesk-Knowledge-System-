@@ -93,11 +93,11 @@ def manage_users():
 @admin_bp.route('/users/<int:user_id>/toggle-status', methods=['POST'])
 def toggle_user_status(user_id: int):
     """Toggle user active / inactive status (ON / OFF switch)."""
-    if user_id == current_user.id:
-        flash("You cannot deactivate your own administrative account.", 'warning')
+    user = User.query.get_or_404(user_id)
+    if user.id == current_user.id or (user.role and user.role.name == Role.ADMIN) or user.username.lower() == 'admin':
+        flash("Administrative accounts cannot be deactivated.", 'warning')
         return redirect(request.referrer or url_for('admin.manage_users'))
 
-    user = User.query.get_or_404(user_id)
     user.is_active = not bool(user.is_active)
     db.session.commit()
 
@@ -170,20 +170,33 @@ def export_users_analytics():
         user_logs_map[uid].append(l)
 
     for u in users:
-        ulogs = user_logs_map.get(u.id, [])
-        total_logins = len(ulogs)
-        success_logins = sum(1 for x in ulogs if x.action == 'LOGIN_SUCCESS')
-        failed_logins = sum(1 for x in ulogs if x.action in ['LOGIN_FAILED', 'LOGIN_BLOCKED_LOCKED', 'ACCOUNT_LOCKED'])
+        # Check if account is Admin (sessions disabled)
+        is_admin_user = (
+            u.is_admin or 
+            u.username.lower() == 'admin' or 
+            (u.role and u.role.name == Role.ADMIN)
+        )
+        if is_admin_user:
+            total_logins = "N/A"
+            success_logins = "N/A"
+            failed_logins = "N/A"
+            duration_label = "No Session Tracking"
+            last_login_str = u.last_login_at.strftime('%Y-%m-%d %H:%M:%S') if u.last_login_at else "Never"
+        else:
+            ulogs = user_logs_map.get(u.id, [])
+            total_logins = len(ulogs)
+            success_logins = sum(1 for x in ulogs if x.action == 'LOGIN_SUCCESS')
+            failed_logins = sum(1 for x in ulogs if x.action in ['LOGIN_FAILED', 'LOGIN_BLOCKED_LOCKED', 'ACCOUNT_LOCKED'])
 
-        last_login_str = "Never"
-        duration_label = "No session"
-        if ulogs:
-            sorted_times = [x.timestamp for x in ulogs]
-            last_login_str = sorted_times[-1].strftime('%Y-%m-%d %H:%M:%S')
-            diff_secs = int((sorted_times[-1] - sorted_times[0]).total_seconds())
-            duration_label = format_duration(diff_secs, len(ulogs))
-        elif u.last_login_at:
-            last_login_str = u.last_login_at.strftime('%Y-%m-%d %H:%M:%S')
+            last_login_str = "Never"
+            duration_label = "No session"
+            if ulogs:
+                sorted_times = [x.timestamp for x in ulogs]
+                last_login_str = sorted_times[-1].strftime('%Y-%m-%d %H:%M:%S')
+                diff_secs = int((sorted_times[-1] - sorted_times[0]).total_seconds())
+                duration_label = format_duration(diff_secs, len(ulogs))
+            elif u.last_login_at:
+                last_login_str = u.last_login_at.strftime('%Y-%m-%d %H:%M:%S')
 
         created_cnt = u.created_tickets.count() if hasattr(u, 'created_tickets') else 0
         assigned_cnt = u.assigned_tickets.count() if hasattr(u, 'assigned_tickets') else 0
@@ -438,8 +451,23 @@ def audit_logs():
     # 1. Automatic 1-Month Cleanup: Automatically delete audit logs older than 30 days
     one_month_ago = datetime.utcnow() - timedelta(days=30)
     purged_count = AuditLog.query.filter(AuditLog.timestamp < one_month_ago).delete(synchronize_session=False)
-    if purged_count > 0:
-        db.session.commit()
+
+    # 1b. Exclude & clean up any login session records for Admin accounts
+    admin_users = User.query.filter(
+        (User.username == 'admin') | 
+        (User.role.has(Role.name == Role.ADMIN))
+    ).all()
+    admin_ids = [u.id for u in admin_users]
+
+    login_actions = ['LOGIN_SUCCESS', 'LOGIN_FAILED', 'LOGIN_BLOCKED_LOCKED', 'ACCOUNT_LOCKED']
+
+    if admin_ids:
+        AuditLog.query.filter(
+            AuditLog.user_id.in_(admin_ids),
+            AuditLog.action.in_(login_actions)
+        ).delete(synchronize_session=False)
+
+    db.session.commit()
 
     # 2. Filters & date-wise queries
     filter_type = request.args.get('filter', 'today_logins')
@@ -448,8 +476,6 @@ def audit_logs():
     today = datetime.utcnow().date()
     today_start = datetime.combine(today, datetime.min.time())
     today_end = datetime.combine(today, datetime.max.time())
-
-    login_actions = ['LOGIN_SUCCESS', 'LOGIN_FAILED', 'LOGIN_BLOCKED_LOCKED', 'ACCOUNT_LOCKED']
 
     query = AuditLog.query
 
@@ -461,7 +487,11 @@ def audit_logs():
         )
     elif filter_type == 'all_logins':
         query = query.filter(AuditLog.action.in_(login_actions))
-    
+
+    # Exclude admin from login session views
+    if filter_type in ['today_logins', 'all_logins'] and admin_ids:
+        query = query.filter(~AuditLog.user_id.in_(admin_ids))
+
     if date_str:
         try:
             target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -475,16 +505,26 @@ def audit_logs():
 
     # 3. Build comprehensive User Stats for "View Option" (how many times user login & time duration)
     user_groups = {}
-    all_login_logs = AuditLog.query.filter(AuditLog.action.in_(login_actions)).order_by(AuditLog.timestamp.desc()).all()
+    all_login_query = AuditLog.query.filter(AuditLog.action.in_(login_actions))
+    if admin_ids:
+        all_login_query = all_login_query.filter(~AuditLog.user_id.in_(admin_ids))
+    all_login_logs = all_login_query.order_by(AuditLog.timestamp.desc()).all()
     for l in all_login_logs:
         uid = l.user_id or 0
+        if uid in admin_ids:
+            continue
         if uid not in user_groups:
             user_groups[uid] = []
         user_groups[uid].append(l)
 
     user_stats = {}
     for uid, ulogs in user_groups.items():
+        if uid in admin_ids:
+            continue
         user = db.session.get(User, uid) if uid else None
+        if user and (user.is_admin or user.username.lower() == 'admin' or (user.role and user.role.name == Role.ADMIN)):
+            continue
+
         username = user.username if user else ('System / AI' if uid == 0 else f'User #{uid}')
         email = user.email if user else '-'
         role_name = user.role.name if (user and user.role) else 'None'
@@ -508,18 +548,24 @@ def audit_logs():
 
     unique_users_list = sorted(user_stats.values(), key=lambda s: s['last_login'], reverse=True)
 
-    # 4. Metrics for stats cards
-    today_logins_count = AuditLog.query.filter(
+    # 4. Metrics for stats cards (excluding admin sessions)
+    today_logins_query = AuditLog.query.filter(
         AuditLog.action == 'LOGIN_SUCCESS',
         AuditLog.timestamp >= today_start,
         AuditLog.timestamp <= today_end
-    ).count()
+    )
+    if admin_ids:
+        today_logins_query = today_logins_query.filter(~AuditLog.user_id.in_(admin_ids))
+    today_logins_count = today_logins_query.count()
 
-    today_failed_count = AuditLog.query.filter(
+    today_failed_query = AuditLog.query.filter(
         AuditLog.action.in_(['LOGIN_FAILED', 'LOGIN_BLOCKED_LOCKED', 'ACCOUNT_LOCKED']),
         AuditLog.timestamp >= today_start,
         AuditLog.timestamp <= today_end
-    ).count()
+    )
+    if admin_ids:
+        today_failed_query = today_failed_query.filter(~AuditLog.user_id.in_(admin_ids))
+    today_failed_count = today_failed_query.count()
 
     total_logs_count = AuditLog.query.count()
 
@@ -616,6 +662,16 @@ def export_audit_logs_analytics():
         )
     elif filter_type == 'all_logins':
         query = query.filter(AuditLog.action.in_(login_actions))
+
+    # Exclude admin from login session exports
+    if filter_type in ['today_logins', 'all_logins']:
+        admin_users_export = User.query.filter(
+            (User.username == 'admin') | 
+            (User.role.has(Role.name == Role.ADMIN))
+        ).all()
+        admin_export_ids = [u.id for u in admin_users_export]
+        if admin_export_ids:
+            query = query.filter(~AuditLog.user_id.in_(admin_export_ids))
 
     if date_str:
         try:

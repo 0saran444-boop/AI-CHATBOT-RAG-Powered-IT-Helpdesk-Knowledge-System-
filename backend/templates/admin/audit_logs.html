@@ -598,9 +598,11 @@
                 </div>
               </td>
 
-              <!-- 4. View Option: Interactive Chip Showing Exact Login Frequency -->
+              <!-- 4. View Option: Interactive Chip Showing Exact Login Frequency (Admin Exempt) -->
               <td class="col-center">
-                {% if log.user_id and log.user_id in user_stats %}
+                {% if log.user and (log.user.is_admin or log.user.username == 'admin' or (log.user.role and log.user.role.name == 'Admin')) %}
+                  <span style="color: #94a3b8; font-size: 0.75rem; font-weight: 600; background: #f1f5f9; padding: 2px 8px; border-radius: 4px; white-space: nowrap;" title="Session tracking is disabled for Admin">No Session</span>
+                {% elif log.user_id and log.user_id in user_stats %}
                   <button 
                     type="button" 
                     class="view-option-chip"

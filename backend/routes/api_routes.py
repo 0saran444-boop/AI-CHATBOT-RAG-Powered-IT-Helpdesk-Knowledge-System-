@@ -1,12 +1,9 @@
 from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
 
-from backend.extensions import db
-from backend.models.ticket import Ticket, TicketCategory, TicketComment, TicketFeedback
+from backend.models.ticket import Ticket
 from backend.models.knowledge import KnowledgeDocument
-from backend.models.ai_response import AIResponse
 from backend.models.sla import SLAPolicy
-from backend.services.ticket_service import TicketService
 from backend.services.rag_service import RAGService
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')

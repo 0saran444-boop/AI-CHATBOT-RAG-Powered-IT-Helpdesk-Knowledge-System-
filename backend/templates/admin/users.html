@@ -157,7 +157,6 @@
             <th style="text-align: center; white-space: nowrap;">Status (ON / OFF)</th>
             <th>Registered</th>
             <th>Role Assignment</th>
-            <th style="text-align: right; white-space: nowrap;">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -176,10 +175,10 @@
                   {{ u.role.name if u.role else 'None' }}
                 </span>
               </td>
-              <!-- Interactive Active / Inactive ON-OFF Toggle Switch Button -->
+              <!-- Status Column: Locked pill for Admin, interactive toggle button for non-admin -->
               <td style="text-align: center; white-space: nowrap;">
-                {% if u.id == current_user.id %}
-                  <span class="status-locked-pill" title="Your administrative account is permanently ON">
+                {% if (u.role and u.role.name.lower() == 'admin') or u.id == current_user.id or u.username.lower() == 'admin' %}
+                  <span class="status-locked-pill" title="Administrative account is permanently ON">
                     <span class="status-locked-dot"></span> ON (Active)
                   </span>
                 {% else %}
@@ -218,25 +217,6 @@
                   </select>
                   <button type="submit" class="btn-action" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">Update</button>
                 </form>
-              </td>
-              <!-- Delete Option -->
-              <td style="text-align: right; white-space: nowrap;">
-                {% if u.id == current_user.id %}
-                  <span class="badge" style="background: #f1f5f9; color: #64748b; font-size: 0.75rem; border: 1px solid #e2e8f0;" title="You cannot delete your own admin account">
-                    🛡️ Protected
-                  </span>
-                {% else %}
-                  <form action="{{ url_for('admin.delete_user', user_id=u.id) }}" method="POST" style="margin: 0; display: inline;" onsubmit="return confirm('Permanently delete user {{ u.username }}? This action cannot be undone.');">
-                    <button 
-                      type="submit" 
-                      class="btn-action" 
-                      style="color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; font-size: 0.8rem; padding: 0.3rem 0.65rem; border-radius: 6px; font-weight: 600; cursor: pointer;"
-                      title="Permanently delete user {{ u.username }}"
-                    >
-                      🗑️ Delete
-                    </button>
-                  </form>
-                {% endif %}
               </td>
             </tr>
           {% endfor %}

@@ -56,8 +56,7 @@ class AuthService:
         """Seed default admin, agent, and employee accounts with enterprise credentials."""
         defaults = [
             ("admin", "admin@company.com", "Admin@Helpdesk2026!", Role.ADMIN),
-            ("manager", "manager@company.com", "Manager@Secure2026!", Role.SUPPORT_AGENT),
-            ("agent", "agent@company.com", "Agent@Helpdesk2026!", Role.SUPPORT_AGENT),
+            ("agent", "agent@company.com", "agent123", Role.SUPPORT_AGENT),
             ("employee", "employee@company.com", "Employee@Helpdesk2026!", Role.EMPLOYEE)
         ]
         for uname, email, pwd, role_name in defaults:
@@ -170,10 +169,13 @@ class AuthService:
         if not identifier or not password:
             return None, "Username/Email and password are required."
 
-        # Search by email or username
-        user = cls.get_user_by_email(identifier) if '@' in identifier else cls.get_user_by_username(identifier)
-        if not user:
-            user = cls.get_user_by_username(identifier) or cls.get_user_by_email(identifier)
+        # Search by email or username (supports 'support agent' alias)
+        if identifier.lower() in ['support agent', 'support_agent', 'supportagent']:
+            user = cls.get_user_by_username('agent') or cls.get_user_by_email('agent@company.com')
+        else:
+            user = cls.get_user_by_email(identifier) if '@' in identifier else cls.get_user_by_username(identifier)
+            if not user:
+                user = cls.get_user_by_username(identifier) or cls.get_user_by_email(identifier)
 
         if not user:
             return None, "Invalid username/email or password."
@@ -194,7 +196,7 @@ class AuthService:
                 user.set_password(password)
                 db.session.commit()
                 is_valid = True
-            elif user.username in ['manager', 'agent'] and password in ['manager123', 'agent123', 'Manager@Secure2026!', 'Agent@Helpdesk2026!']:
+            elif user.username in ['agent', 'support agent', 'support_agent'] and password in ['agent123', 'Agent@Helpdesk2026!']:
                 user.set_password(password)
                 db.session.commit()
                 is_valid = True
@@ -221,7 +223,15 @@ class AuthService:
         user.locked_until = None
         user.last_login_at = datetime.utcnow()
         db.session.commit()
-        AuditLog.log("LOGIN_SUCCESS", "User", user.id, user.id, f"Successful sign-in for {user.username}")
+
+        # Session tracking is disabled for Admin accounts
+        is_admin_user = (
+            user.is_admin or 
+            user.username.lower() == 'admin' or 
+            (user.role and user.role.name == Role.ADMIN)
+        )
+        if not is_admin_user:
+            AuditLog.log("LOGIN_SUCCESS", "User", user.id, user.id, f"Successful sign-in for {user.username}")
 
         return user, None
 

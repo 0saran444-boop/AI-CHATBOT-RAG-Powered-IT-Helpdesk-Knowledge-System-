@@ -33,10 +33,79 @@
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
 }
 
+/* ========================================================================= */
+/* UNIVERSAL HIGH-CONTRAST SCROLLBAR (ALWAYS VISIBLE ON EVERY PAGE)          */
+/* ========================================================================= */
+html {
+  overflow-y: scroll; /* Force vertical scrollbar on every page */
+}
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  scrollbar-color: #d1d1d1 #2c2c2c; /* Firefox: thumb & track */
+  scrollbar-width: auto;
+}
+
+/* WebKit / Chromium (Chrome, Edge, Brave, Opera, Safari) */
+::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+
+::-webkit-scrollbar-track {
+  background: #2c2c2c;
+  border-left: 1px solid #1e1e1e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d1d1d1;
+  border-radius: 8px;
+  border: 3px solid #2c2c2c;
+  min-height: 36px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #e2e8f0;
+  border: 3px solid #2c2c2c;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: #ffffff;
+}
+
+/* Top & Bottom Scroll Arrows */
+::-webkit-scrollbar-button:single-button {
+  background-color: #2c2c2c;
+  display: block;
+  height: 16px;
+  width: 16px;
+  background-size: 8px 8px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+::-webkit-scrollbar-button:single-button:vertical:decrement {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='%239f9f9f'><polygon points='50,22 18,72 82,72'/></svg>");
+}
+
+::-webkit-scrollbar-button:single-button:vertical:decrement:hover {
+  background-color: #383838;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='%23ffffff'><polygon points='50,22 18,72 82,72'/></svg>");
+}
+
+::-webkit-scrollbar-button:single-button:vertical:increment {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='%239f9f9f'><polygon points='50,78 18,28 82,28'/></svg>");
+}
+
+::-webkit-scrollbar-button:single-button:vertical:increment:hover {
+  background-color: #383838;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='%23ffffff'><polygon points='50,78 18,28 82,28'/></svg>");
+}
+
+::-webkit-scrollbar-corner {
+  background: #2c2c2c;
 }
 
 body {

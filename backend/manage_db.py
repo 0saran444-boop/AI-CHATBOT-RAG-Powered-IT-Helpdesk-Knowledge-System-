@@ -60,7 +60,7 @@ def init_database():
         AuthService.seed_default_users()
         TicketCategory.seed_default_categories()
         SLAPolicy.seed_default_policies()
-        print("[✓] Database initialized with all tables, default roles, SLA policies, and admin/manager accounts.")
+        print("[✓] Database initialized with all tables, default roles, SLA policies, and default accounts.")
 
 
 if __name__ == '__main__':

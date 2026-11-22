@@ -1,6 +1,5 @@
 from flask import Blueprint, render_template, request, jsonify
-from flask_login import login_required, current_user
-import json
+from flask_login import login_required
 
 from backend.services.rag_service import VectorStoreManager, HistoricalTicketRetriever
 from backend.services.llm_service import LLMService

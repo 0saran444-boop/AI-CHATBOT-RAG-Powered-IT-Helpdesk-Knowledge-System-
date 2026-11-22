@@ -80,6 +80,7 @@
     overflow-x: auto;
     white-space: nowrap;
     scrollbar-width: none;
+    overscroll-behavior-x: contain;
   }
   .chips-carousel::-webkit-scrollbar {
     display: none;
@@ -118,6 +119,7 @@
     gap: 1.25rem;
     background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
     scroll-behavior: smooth;
+    overscroll-behavior-y: contain;
   }
   .chat-messages-window::-webkit-scrollbar {
     width: 6px;
@@ -552,19 +554,19 @@
       <span style="font-size: 0.75rem; font-weight: 700; color: #64748b; margin-right: 0.25rem;">
         ⚡ Popular:
       </span>
-      <button type="button" class="prompt-chip" onclick="applyQuickPrompt('How do I fix corporate VPN error 800 or connection failure?')">
+      <button type="button" class="prompt-chip" onclick="applyQuickPrompt('How do I fix corporate VPN error 800 or connection failure?', event)">
         🔑 VPN Connection Fix
       </button>
-      <button type="button" class="prompt-chip" onclick="applyQuickPrompt('Network printer shows offline or jobs are stuck in spooler. How to clear?')">
+      <button type="button" class="prompt-chip" onclick="applyQuickPrompt('Network printer shows offline or jobs are stuck in spooler. How to clear?', event)">
         🖨️ Restart Print Spooler
       </button>
-      <button type="button" class="prompt-chip" onclick="applyQuickPrompt('How to reset company domain password securely?')">
+      <button type="button" class="prompt-chip" onclick="applyQuickPrompt('How to reset company domain password securely?', event)">
         🔒 Reset Domain Password
       </button>
-      <button type="button" class="prompt-chip" onclick="applyQuickPrompt('What are the standard Wi-Fi and proxy settings for office laptops?')">
+      <button type="button" class="prompt-chip" onclick="applyQuickPrompt('What are the standard Wi-Fi and proxy settings for office laptops?', event)">
         📶 Wi-Fi &amp; Proxy Setup
       </button>
-      <button type="button" class="prompt-chip" onclick="applyQuickPrompt('How to resolve Outlook email synchronization and mailbox full errors?')">
+      <button type="button" class="prompt-chip" onclick="applyQuickPrompt('How to resolve Outlook email synchronization and mailbox full errors?', event)">
         📧 Outlook Sync Fix
       </button>
     </div>
@@ -645,15 +647,30 @@ const activeModelLabel = document.getElementById('activeModelLabel');
 
 // Client-side multi-turn memory
 let clientHistory = [];
+let isGenerating = false;
 
-function applyQuickPrompt(text) {
+// Scroll chat messages internally without triggering outer window scroll
+function scrollMessagesInternal() {
+  const pageY = window.pageYOffset || document.documentElement.scrollTop;
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  if (window.pageYOffset !== pageY) {
+    window.scrollTo({ top: pageY, left: 0, behavior: 'instant' });
+  }
+}
+
+function applyQuickPrompt(text, evt) {
+  if (evt) {
+    evt.preventDefault();
+    evt.stopPropagation();
+  }
+  const currentScrollY = window.pageYOffset || document.documentElement.scrollTop;
   chatInput.value = text;
-  chatInput.focus();
-  chatForm.dispatchEvent(new Event('submit'));
+  submitChatQuery(text, currentScrollY);
 }
 
 function clearChatHistory() {
   if (!confirm('Start a fresh conversation session? All previous memory will be cleared.')) return;
+  const currentScrollY = window.pageYOffset || document.documentElement.scrollTop;
   clientHistory = [];
   chatMessages.innerHTML = `
     <div class="message-row message-row-bot">
@@ -669,24 +686,40 @@ function clearChatHistory() {
     </div>
   `;
   ticketPromptBar.style.display = 'none';
-  chatInput.focus();
+  chatInput.focus({ preventScroll: true });
+  window.scrollTo({ top: currentScrollY, left: 0, behavior: 'instant' });
 }
 
-chatForm.addEventListener('submit', async (e) => {
+chatForm.addEventListener('submit', (e) => {
   e.preventDefault();
+  e.stopPropagation();
+  const currentScrollY = window.pageYOffset || document.documentElement.scrollTop;
   const query = chatInput.value.trim();
   if (!query) return;
+  submitChatQuery(query, currentScrollY);
+});
+
+async function submitChatQuery(query, savedScrollY) {
+  if (isGenerating || !query) return;
+  isGenerating = true;
 
   // 1. Append User Message
   appendUserMessage(query);
   clientHistory.push({ role: 'user', text: query });
 
   chatInput.value = '';
-  chatInput.disabled = true;
-  sendBtn.disabled = true;
+  // Use readOnly instead of disabled so browser never resets focus to the top slider
+  chatInput.readOnly = true;
+  sendBtn.style.pointerEvents = 'none';
+  sendBtn.style.opacity = '0.6';
 
   // 2. Append Animated Typing / Thinking Indicator
   const typingIndicator = appendTypingIndicator();
+
+  // Maintain page scroll position so no jump to top slider happens
+  if (typeof savedScrollY === 'number') {
+    window.scrollTo({ top: savedScrollY, left: 0, behavior: 'instant' });
+  }
 
   try {
     const res = await fetch("{{ url_for('chat.query_bot') }}", {
@@ -744,7 +777,7 @@ chatForm.addEventListener('submit', async (e) => {
       `;
       data.follow_ups.forEach(q => {
         followUpsHtml += `
-          <button type="button" class="followup-chip" onclick="applyQuickPrompt('${escapeForAttribute(q)}')">
+          <button type="button" class="followup-chip" onclick="applyQuickPrompt('${escapeForAttribute(q)}', event)">
             <span>↳</span> ${escapeHtml(q)}
           </button>
         `;
@@ -765,12 +798,19 @@ chatForm.addEventListener('submit', async (e) => {
     typingIndicator.remove();
     appendBotMessage('<span style="color: #dc2626; font-weight: 600;">⚠ Error communicating with Gemini assistant. Please try again or create a ticket directly.</span>', '', '', '');
   } finally {
-    chatInput.disabled = false;
-    sendBtn.disabled = false;
-    chatInput.focus();
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    isGenerating = false;
+    chatInput.readOnly = false;
+    sendBtn.style.pointerEvents = '';
+    sendBtn.style.opacity = '';
+    chatInput.focus({ preventScroll: true });
+    scrollMessagesInternal();
+
+    // Guarantee the page stays in the exact same position
+    if (typeof savedScrollY === 'number') {
+      window.scrollTo({ top: savedScrollY, left: 0, behavior: 'instant' });
+    }
   }
-});
+}
 
 function appendUserMessage(text) {
   const row = document.createElement('div');
@@ -787,7 +827,7 @@ function appendUserMessage(text) {
     </div>
   `;
   chatMessages.appendChild(row);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  scrollMessagesInternal();
 }
 
 function appendBotMessage(formattedText, citationsHtml, followUpsHtml, rawAnswer, modelName, latencyMs) {
@@ -813,7 +853,7 @@ function appendBotMessage(formattedText, citationsHtml, followUpsHtml, rawAnswer
     </div>
   `;
   chatMessages.appendChild(row);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  scrollMessagesInternal();
 }
 
 function appendTypingIndicator() {
@@ -833,7 +873,7 @@ function appendTypingIndicator() {
     </div>
   `;
   chatMessages.appendChild(row);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  scrollMessagesInternal();
   return row;
 }
 
