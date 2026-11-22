@@ -107,30 +107,6 @@ def toggle_user_status(user_id: int):
     return redirect(request.referrer or url_for('admin.manage_users'))
 
 
-@admin_bp.route('/users/<int:user_id>/delete', methods=['POST'])
-def delete_user(user_id: int):
-    """Delete a user account with safety checks and clean relationship cleanup."""
-    if user_id == current_user.id:
-        flash("You cannot delete your own administrative account.", 'warning')
-        return redirect(url_for('admin.manage_users'))
-
-    user = User.query.get_or_404(user_id)
-    username = user.username
-
-    # Reassign created tickets and comments to admin to maintain complete data integrity
-    Ticket.query.filter_by(created_by_id=user.id).update({'created_by_id': current_user.id})
-    Ticket.query.filter_by(assigned_to_id=user.id).update({'assigned_to_id': None})
-    TicketComment.query.filter_by(user_id=user.id).update({'user_id': current_user.id})
-    AuditLog.query.filter_by(user_id=user.id).update({'user_id': None})
-
-    db.session.delete(user)
-    db.session.commit()
-
-    AuditLog.log("USER_DELETED", "User", user_id, current_user.id, f"Permanently deleted user '{username}'")
-    flash(f"User '{username}' has been deleted successfully.", 'success')
-    return redirect(url_for('admin.manage_users'))
-
-
 @admin_bp.route('/users/export', methods=['GET'])
 @admin_bp.route('/users/export-analytics', methods=['GET'])
 def export_users_analytics():

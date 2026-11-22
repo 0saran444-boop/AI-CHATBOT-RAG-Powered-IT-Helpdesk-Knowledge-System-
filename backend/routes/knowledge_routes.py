@@ -120,7 +120,7 @@ def _apply_document_update(doc, file_path, filename, file_type, heading, categor
 def upload():
     """Upload a new internal IT SOP / troubleshooting document or update if same document exists."""
     if current_user.is_employee:
-        flash("Only IT Support Managers and Administrators can upload knowledge documents.", 'danger')
+        flash("Only Support Agents and Administrators can upload knowledge documents.", 'danger')
         return redirect(url_for('knowledge.index'))
 
     file = request.files.get('document')
@@ -217,7 +217,7 @@ def upload():
 def update_file(doc_id: int):
     """Upload revised file for an existing document with new changes and revision tracking."""
     if current_user.is_employee:
-        flash("Only IT Support Managers and Administrators can update knowledge documents.", 'danger')
+        flash("Only Support Agents and Administrators can update knowledge documents.", 'danger')
         return redirect(url_for('knowledge.index'))
 
     doc = KnowledgeDocument.query.get_or_404(doc_id)
@@ -317,7 +317,7 @@ def rollback_version(doc_id: int, version_id: int):
 @knowledge_bp.route('/<int:doc_id>/update', methods=['POST'])
 @login_required
 def update_heading(doc_id: int):
-    """Update document heading and category (Admin & Manager)."""
+    """Update document heading and category (Admin & Support Agent)."""
     if current_user.is_employee:
         flash("Unauthorized.", 'danger')
         return redirect(url_for('knowledge.index'))
@@ -358,9 +358,9 @@ def reprocess(doc_id: int):
 @knowledge_bp.route('/<int:doc_id>/delete', methods=['POST'])
 @login_required
 def delete(doc_id: int):
-    """Delete document and update FAISS index (Admin & Manager)."""
+    """Delete document and update FAISS index (Admin & Support Agent)."""
     if current_user.is_employee:
-        flash("Only Managers and Administrators can delete knowledge documents.", 'danger')
+        flash("Only Support Agents and Administrators can delete knowledge documents.", 'danger')
         return redirect(url_for('knowledge.index'))
 
     doc = KnowledgeDocument.query.get_or_404(doc_id)
